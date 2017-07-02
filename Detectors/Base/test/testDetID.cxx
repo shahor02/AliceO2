@@ -25,5 +25,14 @@ BOOST_AUTO_TEST_CASE(DetID_test)
     std::cout << "#" << toInt(id) << " Detector " << det.getName()
 	      << " ID=" << det << " mask: " << det.getMask() <<std::endl;
     BOOST_CHECK(toInt(id) == det);
+
+    // test that all names are initialized
+    BOOST_CHECK(std::strlen(det.getName()) == 3);
+  }
+
+  {
+    // test specific name access
+    DetID det(DetID::ITS);
+    BOOST_CHECK(std::strcmp(det.getName(),"ITS") == 0);
   }
 }

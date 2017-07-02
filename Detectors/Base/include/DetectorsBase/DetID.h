@@ -84,37 +84,40 @@ class DetID
 
   /// get derector id
   ID getID() const { return mID; }
+
   /// get detector mask
   std::int32_t getMask() const { return getMask(mID); }
+
   /// get detector name
   const char* getName() const { return getName(mID); }
+
   /// conversion operator to int
   operator int() const { return static_cast<int>(mID); }
+
   //  ---------------- general static methods -----------------
   /// get number of defined detectors
   static constexpr int getNDetectors() { return nDetectors; }
+
   /// names of defined detectors
-  static const char* getName(ID id) { return name[toInt(id)]; }
+  static const char* getName(ID id) { return sDetNames[toInt(id)]; }
+
   // detector ID to mask conversion
-  static std::int32_t getMask(ID id) { return mask[toInt(id)]; }
+  static std::int32_t getMask(ID id) { return sMasks[toInt(id)]; }
+
   // we need default c-tor only for root persistency, code must use c-tor with argument
   DetID() : mID(ID::First) {}
 
- public://private:
+ private:
   ID mID; ///< detector ID
 
   /// number of defined detectors
   static constexpr int nDetectors = toInt(ID::Last) + 1;
 
-  // convert id to mask
-  // static constexpr std::int32_t IDtoMask(ID id) { return 0x1 << toInt(id); }
-  // const static char* name[nDetectors];        ///< defined detector names
-  static constexpr std::array<const char[4], nDetectors> name =      ///< defined detector names
+  static constexpr std::array<const char[4], nDetectors> sDetNames =      ///< defined detector names
     {"ITS", "TPC", "TRD", "TOF", "PHS", "CPV", "EMC", "HMP", "MFT", "MCH", "MID", "ZDC", "FIT"};
 
   // detector names, will be defined in DataSources
-  //  const static std::int32_t mask[nDetectors]; ///< detectot masks for bitvectors
-  static constexpr std::array<std::int32_t,nDetectors> mask =  ///< detectot masks for bitvectors
+  static constexpr std::array<std::int32_t,nDetectors> sMasks =  ///< detectot masks for bitvectors
     { IDtoMask(toInt(ITS)), IDtoMask(toInt(TPC)), IDtoMask(toInt(TRD)),
       IDtoMask(toInt(TOF)), IDtoMask(toInt(PHS)), IDtoMask(toInt(CPV)),
       IDtoMask(toInt(EMC)), IDtoMask(toInt(HMP)), IDtoMask(toInt(MFT)),

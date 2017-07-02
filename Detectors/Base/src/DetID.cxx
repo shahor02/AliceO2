@@ -39,17 +39,5 @@ DetID::DetID(ID id) : mID(id)
   }
 }
 
-/*
-const char* DetID::name[] = {
-  "ITS", "TPC", "TRD", "TOF", "PHS", "CPV", "EMC", "HMP", "MFT", "MCH", "MID", "ZDC", "FIT"
-};
-
-const std::int32_t DetID::mask[] = ///< detectot masks for bitvectors
-  { IDtoMask(toInt(DetID::ITS)), IDtoMask(toInt(DetID::TPC)), IDtoMask(toInt(DetID::TRD)), IDtoMask(toInt(DetID::TOF)),
-    IDtoMask(toInt(DetID::PHS)), IDtoMask(toInt(DetID::CPV)), IDtoMask(toInt(DetID::EMC)), IDtoMask(toInt(DetID::HMP)),
-    IDtoMask(toInt(DetID::MFT)), IDtoMask(toInt(DetID::MCH)), IDtoMask(toInt(DetID::MID)), IDtoMask(toInt(DetID::ZDC)),
-    IDtoMask(toInt(DetID::FIT)) };
-*/
-
-constexpr std::array<const char[4], DetID::nDetectors> DetID::name;
-constexpr std::array<std::int32_t,DetID::nDetectors> DetID::mask;
+constexpr std::array<const char[4], DetID::nDetectors> DetID::sDetNames;
+constexpr std::array<std::int32_t, DetID::nDetectors> DetID::sMasks;
