@@ -69,12 +69,6 @@ class TFProcessor : public o2::framework::Task
   void run(o2::framework::ProcessingContext& pc) final
   {
     auto tfcounter = o2::header::get<o2::framework::DataProcessingHeader*>(pc.inputs().get("input").header)->startTime;
-    /*
-    for (auto& input : pc.inputs()) {
-      tfcounter = header::get<o2::framework::DataProcessingHeader*>(input.header)->startTime;
-      break;
-    }
-    */
     // introduceDelay
     uint32_t delay = std::abs(gRandom->Gaus(mMeanLatency, mLatencyRMS));
     LOG(INFO) << "TFProcessorCopy: " << mDevCopy << " Simulate latency of " << delay << " mcs for TF " << tfcounter;
