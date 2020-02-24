@@ -24,10 +24,11 @@ namespace calibration
 template <typename Container>
 class TimeSlot
 {
+  using TFType = uint64_t;
 
  public:
   TimeSlot() = default;
-  TimeSlot(uint32_t tfS, uint32_t tfE) : mTFStart(tfS), mTFEnd(tfE) {}
+  TimeSlot(TFType tfS, TFType tfE) : mTFStart(tfS), mTFEnd(tfE) {}
   TimeSlot(const TimeSlot& src) : mTFStart(src.mTFStart), mTFEnd(src.mTFEnd), mContainer(std::make_unique<Container>(*src.getContainer())) {}
   TimeSlot& operator=(const TimeSlot& src)
   {
@@ -41,17 +42,17 @@ class TimeSlot
 
   ~TimeSlot() = default;
 
-  uint32_t getTFStart() const { return mTFStart; }
-  uint32_t getTFEnd() const { return mTFEnd; }
+  TFType getTFStart() const { return mTFStart; }
+  TFType getTFEnd() const { return mTFEnd; }
   const Container* getContainer() const { return mContainer.get(); }
   Container* getContainer() { return mContainer.get(); }
   void setContainer(std::unique_ptr<Container> ptr) { mContainer = std::move(ptr); }
 
-  void setTFStart(uint32_t v) { mTFStart = v; }
-  void setTFEnd(uint32_t v) { mTFEnd = v; }
+  void setTFStart(TFType v) { mTFStart = v; }
+  void setTFEnd(TFType v) { mTFEnd = v; }
 
   // compare the TF with this slot boundaties
-  int relateToTF(uint32_t tf) { return tf < mTFStart ? -1 : (tf > mTFEnd ? 1 : 0); }
+  int relateToTF(TFType tf) { return tf < mTFStart ? -1 : (tf > mTFEnd ? 1 : 0); }
 
   // merge data of previous slot to this one and extend the mTFStart to cover prev
   void mergeToPrevious(TimeSlot& prev)
@@ -67,8 +68,8 @@ class TimeSlot
   }
 
  private:
-  uint32_t mTFStart = 0;
-  uint32_t mTFEnd = 0;
+  TFType mTFStart = 0;
+  TFType mTFEnd = 0;
   size_t mEntries = 0;
   std::unique_ptr<Container> mContainer; // user object to accumulate the calibration data for this slot
 

@@ -50,6 +50,7 @@ struct LHCClockDataHisto {
 
 class LHCClockCalibrator : public o2::calibration::TimeSlotCalibration<o2::dataformats::CalibInfoTOF, o2::tof::LHCClockDataHisto>
 {
+  using TFType = uint64_t;
   using Slot = o2::calibration::TimeSlot<o2::tof::LHCClockDataHisto>;
 
  public:
@@ -57,7 +58,7 @@ class LHCClockCalibrator : public o2::calibration::TimeSlotCalibration<o2::dataf
 
   bool hasEnoughData(const Slot& slot) const final { return slot.getContainer()->entries >= mMinEntries; }
   void finalizeSlot(Slot& slot) final;
-  Slot& emplaceNewSlot(bool front, uint32_t tstart, uint32_t tend) final;
+  Slot& emplaceNewSlot(bool front, TFType tstart, TFType tend) final;
 
  private:
   int mMinEntries = 0;

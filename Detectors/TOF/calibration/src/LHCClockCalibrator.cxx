@@ -59,12 +59,12 @@ void LHCClockDataHisto::print() const
 //_____________________________________________
 void LHCClockCalibrator::finalizeSlot(Slot& slot)
 {
-  LOG(INFO) << "Finalize slot " << slot.getTFStart() << " : " << slot.getTFEnd();
+  LOG(INFO) << "Finalize slot " << slot.getTFStart() << " <= TF <= " << slot.getTFEnd();
   slot.print();
 }
 
 //_____________________________________________
-Slot& LHCClockCalibrator::emplaceNewSlot(bool front, uint32_t tstart, uint32_t tend)
+Slot& LHCClockCalibrator::emplaceNewSlot(bool front, TFType tstart, TFType tend)
 {
   auto& cont = getSlots();
   auto& slot = front ? cont.emplace_front(tstart, tend) : cont.emplace_back(tstart, tend);

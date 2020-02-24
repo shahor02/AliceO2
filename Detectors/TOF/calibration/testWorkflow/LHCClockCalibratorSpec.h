@@ -53,7 +53,7 @@ class LHCClockCalibDevice : public o2::framework::Task
   {
     LOG(INFO) << "Finalizing calibration";
     constexpr uint64_t INFINITE_TF = 0xffffffffffffffff;
-    mCalibrator->process(INFINITE_TF, gsl::span<o2::dataformats::CalibInfoTOF>());
+    mCalibrator->checkSlotsToFinalize(INFINITE_TF);
   }
   
  private:
