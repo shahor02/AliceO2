@@ -25,7 +25,7 @@ LHCClockDataHisto::LHCClockDataHisto()
 }
 
 //_____________________________________________
-void LHCClockDataHisto::fill(const gsl::span<o2::dataformats::CalibInfoTOF> data)
+void LHCClockDataHisto::fill(const gsl::span<const o2::dataformats::CalibInfoTOF> data)
 {
   // fill container
   for (int i = data.size(); i--;) {
@@ -59,7 +59,7 @@ void LHCClockDataHisto::print() const
 //_____________________________________________
 void LHCClockCalibrator::finalizeSlot(Slot& slot)
 {
-  LOG(INFO) << "Finalize";
+  LOG(INFO) << "Finalize slot " << slot.getTFStart() << " : " << slot.getTFEnd();
   slot.print();
 }
 

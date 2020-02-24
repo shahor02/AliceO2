@@ -42,7 +42,7 @@ struct LHCClockDataHisto {
 
   size_t getEntries() const { return entries; }
   void print() const;
-  void fill(const gsl::span<o2::dataformats::CalibInfoTOF> data);
+  void fill(const gsl::span<const o2::dataformats::CalibInfoTOF> data);
   void merge(const LHCClockDataHisto* prev);
 
   ClassDefNV(LHCClockDataHisto, 1);
@@ -53,7 +53,7 @@ class LHCClockCalibrator : public o2::calibration::TimeSlotCalibration<o2::dataf
   using Slot = o2::calibration::TimeSlot<o2::tof::LHCClockDataHisto>;
 
  public:
-  LHCClockCalibrator(int minEnt, int nb, float r) : mMinEntries(minEnt), mNBins(nb), mRange(r) {}
+  LHCClockCalibrator(int minEnt = 500, int nb = 1000, float r = 24400) : mMinEntries(minEnt), mNBins(nb), mRange(r) {}
 
   bool hasEnoughData(const Slot& slot) const final { return slot.getContainer()->entries >= mMinEntries; }
   void finalizeSlot(Slot& slot) final;

@@ -21,6 +21,9 @@
 #include "Framework/ControlService.h"
 #include "Framework/WorkflowSpec.h"
 #include "Framework/Task.h"
+#include "DataFormatsTOF/CalibInfoTOF.h"
+#include "TOFBase/Geo.h"
+#include "CommonConstants/MathConstants.h"
 
 namespace o2
 {
@@ -76,8 +79,14 @@ class TFProcessor : public o2::framework::Task
 
     // push dummy output
     auto size = pc.inputs().get<int>("input");
-    auto& output = pc.outputs().make<std::vector<char>>(o2::framework::OutputRef{"output", 0});
-    output.resize(size);
+    auto& output = pc.outputs().make<std::vector<o2::dataformats::CalibInfoTOF>>(o2::framework::OutputRef{"output", 0});
+    output.reserve(size);
+
+    double clockShift = 1e3*std::sin(tfcounter/3000.*o2::constants::math::PI);
+    
+    for (int i=size;i--;) {
+      output.emplace_back( gRandom->Integer(o2::tof::Geo::NCHANNELS), 0, gRandom->Gaus(clockShift, 100.), 0, 0 );
+    }
   }
 
  private:

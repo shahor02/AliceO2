@@ -41,7 +41,7 @@ class TimeSlotCalibration
   const Slot& getLastSlot() const { return (Slot&)mSlots.back(); }
   const Slot& getFirstSlot() const { return (Slot&)mSlots.front(); }
 
-  virtual bool process(uint32_t tf, const gsl::span<Input> data);
+  virtual bool process(uint64_t tf, const gsl::span<const Input> data);
 
   virtual void finalizeSlot(Slot& slot) = 0;
   virtual Slot& emplaceNewSlot(bool front, uint32_t tstart, uint32_t tend) = 0;
@@ -53,12 +53,12 @@ class TimeSlotCalibration
   auto& getSlots() { return mSlots; }
 
  private:
-  uint32_t tf2SlotMin(uint32_t tf) const;
+  uint64_t tf2SlotMin(uint32_t tf) const;
 
   std::deque<Slot> mSlots;
 
-  uint32_t mLastClosedTF = 0;
-  uint32_t mTFStart = 0;
+  uint64_t mLastClosedTF = 0;
+  uint64_t mTFStart = 0;
   uint32_t mSlotLength = 1;
   uint32_t mMaxSlotsDelay = 3;
 
@@ -67,7 +67,7 @@ class TimeSlotCalibration
 
 //_________________________________________________
 template <typename Input, typename Container>
-bool TimeSlotCalibration<Input, Container>::process(uint32_t tf, const gsl::span<Input> data)
+bool TimeSlotCalibration<Input, Container>::process(uint64_t tf, const gsl::span<const Input> data)
 {
   int maxDelay = mMaxSlotsDelay * mSlotLength;
   //  if (tf<mLastClosedTF || (!mSlots.empty() && getSlot(0).getTFStart() > tf + maxDelay)) { // ignore TF
@@ -88,6 +88,7 @@ bool TimeSlotCalibration<Input, Container>::process(uint32_t tf, const gsl::span
         break; // slot has no enough stat. and there is no other slot to merge it to
       }
       mLastClosedTF = slot->getTFEnd() + 1; // do not accept any TF below this
+      LOG(INFO) << "Discarding slot " << slot->getTFStart() << " : " << slot->getTFEnd();
       mSlots.erase(slot);
     } else {
       break;
@@ -104,7 +105,7 @@ bool TimeSlotCalibration<Input, Container>::process(uint32_t tf, const gsl::span
 
 //________________________________________
 template <typename Input, typename Container>
-inline uint32_t TimeSlotCalibration<Input, Container>::tf2SlotMin(uint32_t tf) const
+inline uint64_t TimeSlotCalibration<Input, Container>::tf2SlotMin(uint32_t tf) const
 {
   if (tf < mTFStart) {
     throw std::runtime_error("invalide TF");
@@ -120,7 +121,7 @@ TimeSlot<Container>& TimeSlotCalibration<Input, Container>::getSlotForTF(uint32_
     auto tfmn = tf2SlotMin(mSlots.front().getTFStart() - 1);
     while (tfmn >= tf) {
       emplaceNewSlot(true, tfmn, tfmn + mSlotLength - 1);
-      printf("addFront %d\n", tfmn);
+      LOG(INFO) << "Adding new slot for " << tfmn << " : " << tfmn + mSlotLength - 1;
       if (!tfmn) {
         break;
       }
@@ -139,6 +140,7 @@ TimeSlot<Container>& TimeSlotCalibration<Input, Container>::getSlotForTF(uint32_
   do {
     emplaceNewSlot(false, tfmn, tfmn + mSlotLength - 1);
     tfmn = tf2SlotMin(mSlots.back().getTFEnd() + 1);
+    LOG(INFO) << "Adding new slot for " << tfmn << " : " << tfmn + mSlotLength - 1;
   } while (tf > mSlots.back().getTFEnd());
 
   return mSlots.back();

@@ -9,7 +9,9 @@
 # submit itself to any jurisdiction.
 
 o2_add_library(TOFCalibration
-               SOURCES src/CalibTOFapi.cxx src/CalibTOF.cxx src/CollectCalibInfoTOF.cxx
+               SOURCES src/CalibTOFapi.cxx
+	               src/CalibTOF.cxx
+		       src/CollectCalibInfoTOF.cxx
                        src/LHCClockCalibrator.cxx
                PUBLIC_LINK_LIBRARIES O2::DataFormatsTOF O2::TOFBase
                                      O2::CCDB
@@ -18,7 +20,8 @@ o2_add_library(TOFCalibration
 				  
 				   
 o2_target_root_dictionary(TOFCalibration
-                          HEADERS include/TOFCalibration/CalibTOFapi.h include/TOFCalibration/CalibTOF.h
+                          HEADERS include/TOFCalibration/CalibTOFapi.h
+                                  include/TOFCalibration/CalibTOF.h
                                   include/TOFCalibration/LHCClockCalibrator.h
                                   include/TOFCalibration/CollectCalibInfoTOF.h)
 
@@ -26,4 +29,13 @@ o2_target_root_dictionary(TOFCalibration
 o2_add_executable(data-generator-workflow
                   COMPONENT_NAME calibration
                   SOURCES testWorkflow/data-generator-workflow.cxx
-                  PUBLIC_LINK_LIBRARIES O2::Framework)
+                  PUBLIC_LINK_LIBRARIES O2::Framework
+	                                O2::DataFormatsTOF
+					O2::TOFBase)
+
+o2_add_executable(lhc-clockphase-workflow
+                  COMPONENT_NAME calibration
+                  SOURCES testWorkflow/lhc-clockphase-workflow.cxx
+                  PUBLIC_LINK_LIBRARIES O2::Framework
+ 		                        O2::TOFCalibration
+	                                O2::DetectorsCalibration)
