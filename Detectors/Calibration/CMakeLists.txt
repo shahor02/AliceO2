@@ -10,3 +10,11 @@
 
 o2_add_header_only_library(DetectorsCalibration)
 
+o2_add_executable(ccdb-populator-workflow
+                  COMPONENT_NAME calibration
+                  SOURCES workflow/ccdb-populator-workflow.cxx
+                  PUBLIC_LINK_LIBRARIES O2::Framework
+ 		                        O2::TOFCalibration
+	                                O2::DetectorsCalibration
+					O2::DataFormatsTOF
+					O2::CCDB)

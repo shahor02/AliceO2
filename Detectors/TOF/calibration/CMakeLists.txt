@@ -16,6 +16,7 @@ o2_add_library(TOFCalibration
                PUBLIC_LINK_LIBRARIES O2::DataFormatsTOF O2::TOFBase
                                      O2::CCDB
 	                             O2::DetectorsCalibration
+				     ROOT::Minuit
 	                             ms_gsl::ms_gsl)
 				  
 				   
@@ -39,3 +40,4 @@ o2_add_executable(lhc-clockphase-workflow
                   PUBLIC_LINK_LIBRARIES O2::Framework
  		                        O2::TOFCalibration
 	                                O2::DetectorsCalibration)
+

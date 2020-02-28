@@ -82,7 +82,7 @@ class TFProcessor : public o2::framework::Task
     auto& output = pc.outputs().make<std::vector<o2::dataformats::CalibInfoTOF>>(o2::framework::OutputRef{"output", 0});
     output.reserve(size);
 
-    double clockShift = 1e3*std::sin(tfcounter/3000.*o2::constants::math::PI);
+    double clockShift = 1e3*std::sin(tfcounter/100.*o2::constants::math::PI);
     
     for (int i=size;i--;) {
       output.emplace_back( gRandom->Integer(o2::tof::Geo::NCHANNELS), 0, gRandom->Gaus(clockShift, 100.), 0, 0 );

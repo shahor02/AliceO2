@@ -43,6 +43,7 @@ class TimeSlotCalibration
   const Slot& getFirstSlot() const { return (Slot&)mSlots.front(); }
 
   virtual bool process(TFType tf, const gsl::span<const Input> data);
+  virtual void initOutput() = 0;
   virtual void checkSlotsToFinalize(TFType tf, int maxDelay = 0);
 
   virtual void finalizeSlot(Slot& slot) = 0;
@@ -78,6 +79,7 @@ bool TimeSlotCalibration<Input, Container>::process(TFType tf, const gsl::span<c
     return false;
   }
 
+  initOutput();
   // check if some slots are done
   checkSlotsToFinalize(tf, maxDelay);
 
