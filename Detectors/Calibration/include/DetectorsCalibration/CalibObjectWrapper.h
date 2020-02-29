@@ -27,8 +27,8 @@ class CalibObjectWrapper
  public:
 
   enum ObjectType {
-		   invalid = -1,
-		   lhcphase = 0
+		   INVALID = -1,
+		   LHCPHASE = 0
   };
   
   CalibObjectWrapper() = default;
@@ -39,7 +39,7 @@ class CalibObjectWrapper
 		     long endValidityTimestamp) : mObjectType(type), mPath(path), mMD(metadata), mStart(startValidityTimestamp), mEnd(endValidityTimestamp) {}
   ~CalibObjectWrapper() = default;
 
-  std::string getPath() const { return mPath; }
+  const std::string getPath() const { return mPath; }
   void setPath(std::string path) { mPath = path; }
 
   std::map<std::string, std::string> getMetaData() const { return mMD; }
@@ -52,14 +52,14 @@ class CalibObjectWrapper
   void setEndValidityTimestamp(long end) { mEnd = end; }
 
   void setObjectType(ObjectType o) { mObjectType = o; }
-  int getObjectType() const { return mObjectType; }
+  ObjectType getObjectType() const { return mObjectType; }
   
  private:
   std::string mPath;                      // path in the CCDB
   std::map<std::string, std::string> mMD; // metadata
   long mStart;                            // start of the validity of the object
   long mEnd;                              // end of the validity of the object
-  int mObjectType;                        // object type from enum defined in this class
+  ObjectType mObjectType;                        // object type from enum defined in this class
   
   ClassDefNV(CalibObjectWrapper, 1);
 };

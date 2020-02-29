@@ -112,7 +112,7 @@ void LHCClockCalibrator::finalizeSlot(Slot& slot)
   //CalibObjectWrapper wrapper(o2::calibration::CalibObjectWrapper::ObjectType::lhcphase, "TOF/LHCphase", md, slot.getTFStart(), 99999999999999);
   LHCphase l;
   l.addLHCphase(slot.getTFStart(), fitValues[1]);
-  mWrapperVector.emplace_back(o2::calibration::CalibObjectWrapper::ObjectType::lhcphase, "TOF/LHCphase", md, slot.getTFStart(), 99999999999999);
+  mWrapperVector.emplace_back(o2::calibration::CalibObjectWrapper::ObjectType::LHCPHASE, "TOF/LHCphase", md, slot.getTFStart(), 99999999999999);
   mLHCphaseVector.emplace_back(l);
   
   slot.print();
