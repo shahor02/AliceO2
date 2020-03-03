@@ -13,7 +13,10 @@
 
 #include "DetectorsCalibration/TimeSlotCalibration.h"
 #include "DetectorsCalibration/TimeSlot.h"
+#include "DetectorsCalibration/CalibObjectWrapper.h"
 #include "DataFormatsTOF/CalibInfoTOF.h"
+#include "TOFCalibration/CalibTOFapi.h"
+#include "DataFormatsTOF/CalibLHCphaseTOF.h"
 
 #include <array>
 
@@ -47,24 +50,36 @@ struct LHCClockDataHisto {
 
   ClassDefNV(LHCClockDataHisto, 1);
 };
-
+  
 class LHCClockCalibrator : public o2::calibration::TimeSlotCalibration<o2::dataformats::CalibInfoTOF, o2::tof::LHCClockDataHisto>
 {
   using TFType = uint64_t;
   using Slot = o2::calibration::TimeSlot<o2::tof::LHCClockDataHisto>;
-
+  using CalibTOFapi = o2::tof::CalibTOFapi;
+  using LHCphase = o2::dataformats::CalibLHCphaseTOF;
+  using CalibObjectWrapper = o2::calibration::CalibObjectWrapper;
+  using CalibObjectWrapperVector = std::vector<CalibObjectWrapper>;
+  using LHCphaseVector = std::vector<LHCphase>;
+  
  public:
-  LHCClockCalibrator(int minEnt = 500, int nb = 1000, float r = 24400) : mMinEntries(minEnt), mNBins(nb), mRange(r) {}
+  LHCClockCalibrator(int minEnt = 500, int nb = 1000, float r = 24400, const std::string path = "http://ccdb-test.cern.ch:8080") : mMinEntries(minEnt), mNBins(nb), mRange(r) {mCalibTOFapi.setURL(path);}
 
   bool hasEnoughData(const Slot& slot) const final { return slot.getContainer()->entries >= mMinEntries; }
+  void initOutput() final;
   void finalizeSlot(Slot& slot) final;
   Slot& emplaceNewSlot(bool front, TFType tstart, TFType tend) final;
-
+  
+  const LHCphaseVector& getLHCphaseVector() const { return mLHCphaseVector; }
+  const CalibObjectWrapperVector& getLHCphaseWrapperVector() const { return mWrapperVector; }
+  
  private:
   int mMinEntries = 0;
   int mNBins = 0;
   float mRange = 0.;
-
+  CalibTOFapi mCalibTOFapi;
+  CalibObjectWrapperVector mWrapperVector;  // vector of pairs of LhcPhase, each element is filled in "process" when we finalize one slot (multiple can be finalized during the same "process", which is why we have a vector. Each element is to be considered the output of the device, and will go to the CCDB
+  LHCphaseVector mLHCphaseVector;  // vector of pairs of LhcPhase, each element is filled in "process" when we finalize one slot (multiple can be finalized during the same "process", which is why we have a vector. Each element is to be considered the output of the device, and will go to the CCDB
+  
   ClassDefOverride(LHCClockCalibrator, 1);
 };
 

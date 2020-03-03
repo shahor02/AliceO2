@@ -21,6 +21,7 @@
 #include "Framework/ControlService.h"
 #include "Framework/WorkflowSpec.h"
 
+using namespace o2::framework;
 
 namespace o2
 {
@@ -39,6 +40,7 @@ class LHCClockCalibDevice : public o2::framework::Task
     mCalibrator = std::make_unique<o2::tof::LHCClockCalibrator>(minEnt, nb);
     mCalibrator->setSlotLength(slotL);
     mCalibrator->setMaxSlotsDelay(delay);
+
   }
 
   void run(o2::framework::ProcessingContext& pc) final
@@ -46,8 +48,10 @@ class LHCClockCalibDevice : public o2::framework::Task
     auto tfcounter = o2::header::get<o2::framework::DataProcessingHeader*>(pc.inputs().get("input").header)->startTime;
     auto data = pc.inputs().get<gsl::span<o2::dataformats::CalibInfoTOF>>("input");
     LOG(INFO) << "Processing TF " << tfcounter << " with " << data.size() << " tracks";
-    mCalibrator->process( tfcounter, data );
-  }
+    mCalibrator->process( tfcounter, data);
+    pc.outputs().snapshot(Output{o2::header::gDataOriginTOF, "LHCPHASE", 0, Lifetime::Timeframe}, mCalibrator->getLHCphaseVector());
+    pc.outputs().snapshot(Output{o2::header::gDataOriginTOF, "LHCPHASEWRAPPER", 0, Lifetime::Timeframe}, mCalibrator->getLHCphaseWrapperVector());
+  }			  
 
   void endOfStream(o2::framework::EndOfStreamContext& context) final
   {
@@ -68,10 +72,14 @@ namespace framework
 
 DataProcessorSpec getLHCClockCalibDeviceSpec()
 {
+
+  std::vector<OutputSpec> outputs;
+  outputs.emplace_back(o2::header::gDataOriginTOF, "LHCPHASE", 0, Lifetime::Timeframe);
+  outputs.emplace_back(o2::header::gDataOriginTOF, "LHCPHASEWRAPPER", 0, Lifetime::Timeframe);
   return DataProcessorSpec{
     "calib-lhcclock-calibration",
     Inputs{{"input", "CLB", "CALIBDATA"}},
-    Outputs{},
+    outputs,
     AlgorithmSpec{adaptFromTask<o2::calibration::LHCClockCalibDevice>()},
     Options{
       {"tf-per-slot", VariantType::Int, 5, {"number of TFs per calibration time slot"}},
