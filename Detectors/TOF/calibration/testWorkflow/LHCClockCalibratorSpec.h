@@ -50,7 +50,7 @@ class LHCClockCalibDevice : public o2::framework::Task
     LOG(INFO) << "Processing TF " << tfcounter << " with " << data.size() << " tracks";
     mCalibrator->process( tfcounter, data);
     pc.outputs().snapshot(Output{o2::header::gDataOriginTOF, "LHCPHASE", 0, Lifetime::Timeframe}, mCalibrator->getLHCphaseVector());
-    pc.outputs().snapshot(Output{o2::header::gDataOriginTOF, "LHCPHASEWRAPPER", 0, Lifetime::Timeframe}, mCalibrator->getLHCphaseWrapperVector());
+    pc.outputs().snapshot(Output{"CLB", "WRAPPER", 0, Lifetime::Timeframe}, mCalibrator->getLHCphaseWrapperVector());
   }			  
 
   void endOfStream(o2::framework::EndOfStreamContext& context) final
@@ -75,7 +75,7 @@ DataProcessorSpec getLHCClockCalibDeviceSpec()
 
   std::vector<OutputSpec> outputs;
   outputs.emplace_back(o2::header::gDataOriginTOF, "LHCPHASE", 0, Lifetime::Timeframe);
-  outputs.emplace_back(o2::header::gDataOriginTOF, "LHCPHASEWRAPPER", 0, Lifetime::Timeframe);
+  outputs.emplace_back("CLB", "WRAPPER", 0, Lifetime::Timeframe);
   return DataProcessorSpec{
     "calib-lhcclock-calibration",
     Inputs{{"input", "CLB", "CALIBDATA"}},

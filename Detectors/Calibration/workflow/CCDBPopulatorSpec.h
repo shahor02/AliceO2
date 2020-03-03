@@ -20,6 +20,8 @@
 #include "Framework/WorkflowSpec.h"
 #include "Framework/Task.h"
 #include "Framework/CompletionPolicyHelpers.h"
+#include "Framework/DataRefUtils.h"
+#include "Headers/DataHeader.h"
 #include "CCDB/BasicCCDBManager.h"
 #include "CCDB/CcdbApi.h"
 #include "DetectorsCalibration/CalibObjectWrapper.h"
@@ -54,15 +56,36 @@ class CCDBPopulator : public o2::framework::Task
     CcdbApi api;
     api.init(mgr.getURL());
 
-    const auto& lhcclockoutput = pc.inputs().get<LHCphaseVector>("lhcphasecalib");
-    const auto& lhcclockwrapoutput = pc.inputs().get<CalibObjectWrapperVector>("lhcphasecalibwrap");
-    for (int i = 0 ; i < lhcclockoutput.size(); i++) {
-      auto lhcphase = lhcclockoutput[i];
-      auto lhcphasewrap = lhcclockwrapoutput[i];
-      //CalibObjectWrapper* w = lhcphasepair.first();
-      //LHCphase* l = lhcphasepair.second();
-      api.storeAsTFileAny(&lhcphase, lhcphasewrap.getPath(), lhcphasewrap.getMetaData(), lhcphasewrap.getStartValidityTimestamp(), lhcphasewrap.getEndValidityTimestamp());
+    const auto& lhcclockwrapoutput = pc.inputs().get<CalibObjectWrapperVector>("calibwrapper");
+
+    // first way
+    // decide which type of object is received
+    auto lhcphasewrap = lhcclockwrapoutput[0];
+    if (lhcphasewrap.getObjectType() == o2::calibration::CalibObjectWrapper::ObjectType::LHCPHASE) {
+      const auto& lhcclockoutput = pc.inputs().get<LHCphaseVector>("lhcphasecalib");
+      for (int i = 0 ; i < lhcclockoutput.size(); i++) {
+	auto lhcphase = lhcclockoutput[i];
+	auto lhcphasewrap = lhcclockwrapoutput[i];
+	api.storeAsTFileAny(&lhcphase, lhcphasewrap.getPath(), lhcphasewrap.getMetaData(), lhcphasewrap.getStartValidityTimestamp(), lhcphasewrap.getEndValidityTimestamp());
+      }
     }
+    // end of first way
+    // second way, now commented out:
+    /*
+    for (int i = 1; i < pc.inputs().size(); i++){
+      DataRef ref = pc.inputs().getByPos(i);
+      auto const* header = DataRefUtils::getHeader<o2::header::DataHeader*>(ref);
+      if (header->dataDescription == "lhcphasecalib") { // here I am not sure this is the data description... to be checked
+	const auto& lhcclockoutput = pc.inputs().get<LHCphaseVector>("lhcphasecalib");
+	for (int i = 0 ; i < lhcclockoutput.size(); i++) {
+	  auto lhcphase = lhcclockoutput[i];
+	  auto lhcphasewrap = lhcclockwrapoutput[i];
+	  api.storeAsTFileAny(&lhcphase, lhcphasewrap.getPath(), lhcphasewrap.getMetaData(), lhcphasewrap.getStartValidityTimestamp(), lhcphasewrap.getEndValidityTimestamp());
+	}
+      }
+    }
+    */
+    // end of second way
   }
 
  private:
@@ -79,7 +102,7 @@ DataProcessorSpec getCCDBPopulatorDeviceSpec()
 {
   std::vector<InputSpec> inputs;
   inputs.emplace_back("lhcphasecalib", o2::header::gDataOriginTOF, "LHCPHASE", 0);
-  inputs.emplace_back("lhcphasecalibwrap", o2::header::gDataOriginTOF, "LHCPHASEWRAPPER", 0);
+  inputs.emplace_back("calibwrapper", "CLB", "WRAPPER", 0);
 
   return DataProcessorSpec{
     "ccdb-populator",
