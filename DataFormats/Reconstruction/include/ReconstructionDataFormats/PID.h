@@ -50,8 +50,8 @@ class PID
   static constexpr ID HyperTriton = 13;
   static constexpr ID FirstExt = PI0;
   static constexpr ID LastExt = HyperTriton;
-  static constexpr ID NIDsTot = LastExt + 1;  ///< total number of defined IDs
-  
+  static constexpr ID NIDsTot = LastExt + 1; ///< total number of defined IDs
+
   PID() = default;
   PID(ID id) : mID(id) {}
   PID(const char* name);
@@ -60,7 +60,7 @@ class PID
 
   ID getID() const { return mID; }
   operator ID() const { return getID(); }
-  
+
   float getMass() const { return getMass(mID); }
   float getMass2Z() const { return getMass2Z(mID); }
   int getCharge() const { return getCharge(mID); }
@@ -98,8 +98,7 @@ class PID
      o2::constants::physics::MassAlpha,
      o2::constants::physics::MassPionNeutral, o2::constants::physics::MassPhoton,
      o2::constants::physics::MassKaonNeutral, o2::constants::physics::MassLambda,
-     o2::constants::physics::MassHyperTriton
-    };
+     o2::constants::physics::MassHyperTriton};
 
   static constexpr const float sMasses2Z[NIDsTot] = ///< defined particle masses / Z
     {o2::constants::physics::MassElectron, o2::constants::physics::MassMuon,
@@ -107,13 +106,11 @@ class PID
      o2::constants::physics::MassProton, o2::constants::physics::MassDeuteron,
      o2::constants::physics::MassTriton, o2::constants::physics::MassHelium3 / 2.,
      o2::constants::physics::MassAlpha / 2.,
-     0, 0, 0, 0, o2::constants::physics::MassHyperTriton
-    };
+     0, 0, 0, 0, o2::constants::physics::MassHyperTriton};
 
   static constexpr const int sCharges[NIDsTot] = ///< defined particle charges
     {1, 1, 1, 1, 1, 1, 1, 2, 2,
-     0, 0, 0, 0, 1
-    };
+     0, 0, 0, 0, 1};
 
   ClassDefNV(PID, 2);
 };

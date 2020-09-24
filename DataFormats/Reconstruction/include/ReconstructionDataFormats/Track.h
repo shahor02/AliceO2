@@ -155,12 +155,13 @@ class TrackPar
   float getQ2Pt() const { return mP[kQ2Pt]; }
   float getCharge2Pt() const { return mAbsCharge ? mP[kQ2Pt] : 0.; }
   int getAbsCharge() const { return mAbsCharge; }
-  PID getPID() const {return mPID;}
-  void setPID(const PID pid) {
+  PID getPID() const { return mPID; }
+  void setPID(const PID pid)
+  {
     mPID = pid;
     setAbsCharge(pid.getCharge());
   }
-  
+
   /// calculate cos^2 and cos of track direction in rphi-tracking
   float getCsp2() const
   {
@@ -246,7 +247,7 @@ class TrackPar
   float mP[kNParams] = {0.f}; /// 5 parameters: Y,Z,sin(phi),tg(lambda),q/pT
   char mAbsCharge = 1;        /// Extra info about the abs charge, to be taken into account only if not 1
   PID mPID{};                 /// 8 bit PID
-  
+
   ClassDefNV(TrackPar, 2);
 };
 
