@@ -219,9 +219,8 @@ class TrackParametrization
   std::string asString() const;
 #endif
 
- protected:
   GPUd() void updateParam(value_t delta, int i);
-  GPUd() void updateParams(const value_t delta[kNParams]);
+  GPUd() void updateParams(const params_t& delta);
 
  private:
   //
@@ -666,7 +665,7 @@ GPUdi() void TrackParametrization<value_T>::updateParam(value_t delta, int i)
 
 //____________________________________________________________
 template <typename value_T>
-GPUdi() void TrackParametrization<value_T>::updateParams(const value_t delta[kNParams])
+GPUdi() void TrackParametrization<value_T>::updateParams(const params_t& delta)
 {
   for (int i = kNParams; i--;) {
     mP[i] += delta[i];

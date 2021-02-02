@@ -34,12 +34,11 @@ class TrackParametrizationWithError : public TrackParametrization<value_T>
   using typename TrackParametrization<value_T>::dim3_t;
   using typename TrackParametrization<value_T>::dim2_t;
   using typename TrackParametrization<value_T>::params_t;
+  using covMat_t = gpu::gpustd::array<value_t, kCovMatSize>;
 
 #ifndef GPUCA_GPUCODE_DEVICE
   static_assert(std::is_floating_point_v<value_t>);
 #endif
-
-  using covMat_t = gpu::gpustd::array<value_t, kCovMatSize>;
 
   GPUd() TrackParametrizationWithError();
   GPUd() TrackParametrizationWithError(value_t x, value_t alpha, const params_t& par, const covMat_t& cov, int charge = 1, const PID pid = PID::Pion);
@@ -53,8 +52,9 @@ class TrackParametrizationWithError : public TrackParametrization<value_T>
   GPUdDefault() ~TrackParametrizationWithError() = default;
   using TrackParametrization<value_T>::TrackParametrization;
 
+  using TrackParametrization<value_T>::set;
   GPUd() void set(value_t x, value_t alpha, const params_t& par, const covMat_t& cov, int charge = 1, const PID pid = PID::Pion);
-  GPUd() const value_t* getCov() const;
+  GPUd() const covMat_t& getCov() const;
   GPUd() value_t getSigmaY2() const;
   GPUd() value_t getSigmaZY() const;
   GPUd() value_t getSigmaZ2() const;
@@ -107,13 +107,16 @@ class TrackParametrizationWithError : public TrackParametrization<value_T>
 
   GPUd() void resetCovariance(value_t s2 = 0);
   GPUd() void checkCovariance();
+  GPUd() void setCov(value_t v, size_t i, size_t j);
   GPUd() void setCov(value_t v, int i);
+  GPUd() void setCov(const covMat_t& mat);
 
-  GPUd() void updateCov(const value_t delta[kCovMatSize]);
-  GPUd() void updateCov(value_t delta, int i);
+  GPUd() void updateCov(const covMat_t& delta);
+  GPUd() void updateCov(value_t delta, size_t i, size_t j);
+  GPUd() void updateCov(value_t delta, size_t i);
 
  protected:
-  value_t mC[kCovMatSize] = {0.f}; // 15 covariance matrix elements
+  covMat_t mC{0.f}; // 15 covariance matrix elements
 
   ClassDefNV(TrackParametrizationWithError, 2);
 };
@@ -148,7 +151,7 @@ GPUdi() void TrackParametrizationWithError<value_T>::set(value_t x, value_t alph
 
 //__________________________________________________________________________
 template <typename value_T>
-GPUdi() auto TrackParametrizationWithError<value_T>::getCov() const -> const value_t*
+GPUdi() auto TrackParametrizationWithError<value_T>::getCov() const -> const covMat_t&
 {
   return mC;
 }
@@ -301,16 +304,36 @@ GPUdi() void TrackParametrizationWithError<value_T>::setCov(value_t v, int i)
 
 //__________________________________________________________________________
 template <typename value_T>
-GPUdi() void TrackParametrizationWithError<value_T>::updateCov(value_t delta, int i)
+GPUdi() void TrackParametrizationWithError<value_T>::setCov(value_t v, size_t i, size_t j)
+{
+  mC[CovarMap[i][j]] = v;
+}
+
+template <typename value_T>
+GPUdi() void TrackParametrizationWithError<value_T>::setCov(const covMat_t& cov)
+{
+  mC = cov;
+}
+
+//__________________________________________________________________________
+template <typename value_T>
+GPUdi() void TrackParametrizationWithError<value_T>::updateCov(value_t delta, size_t i, size_t j)
+{
+  mC[CovarMap[i][j]] += delta;
+}
+
+//__________________________________________________________________________
+template <typename value_T>
+GPUdi() void TrackParametrizationWithError<value_T>::updateCov(value_t delta, size_t i)
 {
   mC[i] += delta;
 }
 
 //__________________________________________________________________________
 template <typename value_T>
-GPUdi() void TrackParametrizationWithError<value_T>::updateCov(const value_t delta[kCovMatSize])
+GPUdi() void TrackParametrizationWithError<value_T>::updateCov(const covMat_t& delta)
 {
-  for (int i = kCovMatSize; i--;) {
+  for (size_t i = 0; i < kCovMatSize; ++i) {
     mC[i] += delta[i];
   }
 }
