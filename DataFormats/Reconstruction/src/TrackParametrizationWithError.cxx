@@ -913,6 +913,77 @@ GPUd() bool TrackParametrizationWithError<value_T>::update(const dim2_t& p, cons
 
 //______________________________________________
 template <typename value_T>
+GPUd() bool TrackParametrizationWithError<value_T>::update(const value_t* p, const value_t* cov)
+{
+  // Update the track parameters with the space point "p" having
+  // the covariance matrix "cov"
+
+  value_t &cm00 = mC[kSigY2], &cm10 = mC[kSigZY], &cm11 = mC[kSigZ2], &cm20 = mC[kSigSnpY], &cm21 = mC[kSigSnpZ],
+          &cm22 = mC[kSigSnp2], &cm30 = mC[kSigTglY], &cm31 = mC[kSigTglZ], &cm32 = mC[kSigTglSnp], &cm33 = mC[kSigTgl2],
+          &cm40 = mC[kSigQ2PtY], &cm41 = mC[kSigQ2PtZ], &cm42 = mC[kSigQ2PtSnp], &cm43 = mC[kSigQ2PtTgl],
+          &cm44 = mC[kSigQ2Pt2];
+
+  // use double precision?
+  double r00 = static_cast<double>(cov[0]) + static_cast<double>(cm00);
+  double r01 = static_cast<double>(cov[1]) + static_cast<double>(cm10);
+  double r11 = static_cast<double>(cov[2]) + static_cast<double>(cm11);
+  double det = r00 * r11 - r01 * r01;
+
+  if (gpu::CAMath::Abs(det) < constants::math::Almost0) {
+    return false;
+  }
+  double detI = 1. / det;
+  double tmp = r00;
+  r00 = r11 * detI;
+  r11 = tmp * detI;
+  r01 = -r01 * detI;
+
+  double k00 = cm00 * r00 + cm10 * r01, k01 = cm00 * r01 + cm10 * r11;
+  double k10 = cm10 * r00 + cm11 * r01, k11 = cm10 * r01 + cm11 * r11;
+  double k20 = cm20 * r00 + cm21 * r01, k21 = cm20 * r01 + cm21 * r11;
+  double k30 = cm30 * r00 + cm31 * r01, k31 = cm30 * r01 + cm31 * r11;
+  double k40 = cm40 * r00 + cm41 * r01, k41 = cm40 * r01 + cm41 * r11;
+
+  value_t dy = p[kY] - this->getY(), dz = p[kZ] - this->getZ();
+  value_t dsnp = k20 * dy + k21 * dz;
+  if (gpu::CAMath::Abs(this->getSnp() + dsnp) > constants::math::Almost1) {
+    return false;
+  }
+
+  const params_t dP{value_t(k00 * dy + k01 * dz), value_t(k10 * dy + k11 * dz), dsnp, value_t(k30 * dy + k31 * dz),
+                    value_t(k40 * dy + k41 * dz)};
+  this->updateParams(dP);
+
+  double c01 = cm10, c02 = cm20, c03 = cm30, c04 = cm40;
+  double c12 = cm21, c13 = cm31, c14 = cm41;
+
+  cm00 -= k00 * cm00 + k01 * cm10;
+  cm10 -= k00 * c01 + k01 * cm11;
+  cm20 -= k00 * c02 + k01 * c12;
+  cm30 -= k00 * c03 + k01 * c13;
+  cm40 -= k00 * c04 + k01 * c14;
+
+  cm11 -= k10 * c01 + k11 * cm11;
+  cm21 -= k10 * c02 + k11 * c12;
+  cm31 -= k10 * c03 + k11 * c13;
+  cm41 -= k10 * c04 + k11 * c14;
+
+  cm22 -= k20 * c02 + k21 * c12;
+  cm32 -= k20 * c03 + k21 * c13;
+  cm42 -= k20 * c04 + k21 * c14;
+
+  cm33 -= k30 * c03 + k31 * c13;
+  cm43 -= k30 * c04 + k31 * c14;
+
+  cm44 -= k40 * c04 + k41 * c14;
+
+  checkCovariance();
+
+  return true;
+}
+
+//______________________________________________
+template <typename value_T>
 GPUd() bool TrackParametrizationWithError<value_T>::correctForMaterial(value_t x2x0, value_t xrho, bool anglecorr, value_t dedx)
 {
   //------------------------------------------------------------------

@@ -88,6 +88,7 @@ class TrackParametrizationWithError : public TrackParametrization<value_T>
   GPUd() void invert();
 
   GPUd() value_t getPredictedChi2(const dim2_t& p, const dim3_t& cov) const;
+  GPUd() value_t getPredictedChi2(const value_t* p, const value_t* cov) const;
 
   template <typename T>
   GPUd() value_t getPredictedChi2(const BaseCluster<T>& p) const;
@@ -99,6 +100,7 @@ class TrackParametrizationWithError : public TrackParametrization<value_T>
   bool update(const TrackParametrizationWithError& rhs);
 
   GPUd() bool update(const dim2_t& p, const dim3_t& cov);
+  GPUd() bool update(const value_t* p, const value_t* cov);
 
   template <typename T>
   GPUd() bool update(const BaseCluster<T>& p);
@@ -144,6 +146,16 @@ template <typename value_T>
 GPUdi() void TrackParametrizationWithError<value_T>::set(value_t x, value_t alpha, const params_t& par, const covMat_t& cov, int charge, const PID pid)
 {
   TrackParametrization<value_T>::set(x, alpha, par, charge, pid);
+  for (int i = 0; i < kCovMatSize; i++) {
+    mC[i] = cov[i];
+  }
+}
+
+//__________________________________________________________________________
+template <typename value_T>
+GPUdi() void TrackParametrizationWithError<value_T>::set(value_t x, value_t alpha, const value_t* par, const value_t* cov, int charge)
+{
+  TrackParametrization<value_T>::set(x, alpha, par, charge);
   for (int i = 0; i < kCovMatSize; i++) {
     mC[i] = cov[i];
   }
