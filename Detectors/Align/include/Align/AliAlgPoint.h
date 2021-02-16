@@ -26,7 +26,6 @@
 #include <TObject.h>
 #include <TMatrixD.h>
 #include <TVectorD.h>
-#include "Align/AliAlgSens.h"
 #include "ReconstructionDataFormats/Track.h"
 #include "Framework/Logger.h"
 #include "Align/AliAlgAux.h"
@@ -64,7 +63,6 @@ class AliAlgPoint : public TObject
   virtual ~AliAlgPoint() {}
   //
   void Init();
-  void UpdatePointByTrackInfo(const trackParam_t* t);
   //
   Double_t GetAlphaSens() const { return fAlphaSens; }
   Double_t GetXSens() const { return fXSens; }
@@ -76,9 +74,7 @@ class AliAlgPoint : public TObject
   const Double_t* GetXYZTracking() const { return fXYZTracking; }
   const Double_t* GetYZErrTracking() const { return fErrYZTracking; }
 
-  const AliAlgSens* GetSensor() const { return fSensor; }
   UInt_t GetVolID() const { return fSensor->GetVolID(); }
-  void SetSensor(AliAlgSens* s) { fSensor = s; }
 
   Int_t GetDetID() const { return fDetID; }
   Int_t GetSID() const { return fSID; }
@@ -217,8 +213,6 @@ class AliAlgPoint : public TObject
   //
   Double_t fTrParamWSA[kNMatDOFs]; // workspace for tracks params at this point AFTER material correction
   Double_t fTrParamWSB[kNMatDOFs]; // workspace for tracks params at this point BEFORE material correction
-
-  AliAlgSens* fSensor; // sensor of this point
 
   ClassDef(AliAlgPoint, 1)
 };

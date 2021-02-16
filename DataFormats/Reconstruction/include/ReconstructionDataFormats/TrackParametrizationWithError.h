@@ -153,16 +153,6 @@ GPUdi() void TrackParametrizationWithError<value_T>::set(value_t x, value_t alph
 
 //__________________________________________________________________________
 template <typename value_T>
-GPUdi() void TrackParametrizationWithError<value_T>::set(value_t x, value_t alpha, const value_t* par, const value_t* cov, int charge)
-{
-  TrackParametrization<value_T>::set(x, alpha, par, charge);
-  for (int i = 0; i < kCovMatSize; i++) {
-    mC[i] = cov[i];
-  }
-}
-
-//__________________________________________________________________________
-template <typename value_T>
 GPUdi() auto TrackParametrizationWithError<value_T>::getCov() const -> const covMat_t&
 {
   return mC;

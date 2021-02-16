@@ -262,18 +262,6 @@ GPUdi() void TrackParametrization<value_T>::set(value_t x, value_t alpha, const 
 
 //____________________________________________________________
 template <typename value_T>
-GPUdi() void TrackParametrization<value_T>::set(value_t x, value_t alpha, const value_t* par, int charge)
-{
-  mX = x;
-  mAlpha = alpha;
-  mAbsCharge = char(gpu::CAMath::Abs(charge));
-  for (int i = 0; i < kNParams; i++) {
-    mP[i] = par[i];
-  }
-}
-
-//____________________________________________________________
-template <typename value_T>
 GPUdi() auto TrackParametrization<value_T>::getParams() const -> const value_t*
 {
   return mP;

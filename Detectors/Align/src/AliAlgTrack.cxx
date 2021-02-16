@@ -1040,7 +1040,7 @@ Bool_t AliAlgTrack::IniFit()
       return kFALSE;
     //printf("Combined\n"); trc.print();
   }
-  CopyFrom(&trc);
+  trackParam_t::operator=(trc);
   //
   fChi2Ini = fChi2;
 
@@ -1181,8 +1181,10 @@ Bool_t AliAlgTrack::FitLeg(trackParam_t& trc, int pFrom, int pTo, Bool_t& inv)
     if (!PropagateToPoint(trc, pnt, kMinNStep, kMaxDefStep, kTRUE))
       return kFALSE;
     if (pnt->ContainsMeasurement()) {
-      if (pnt->GetNeedUpdateFromTrack())
-        pnt->UpdatePointByTrackInfo(&trc);
+      
+      //      if (pnt->GetNeedUpdateFromTrack()) { // RSTODO this method is needed in very special cases (TRD), find other way to not rely on sensor pointer stored in the track
+      //        pnt->UpdatePointByTrackInfo(&trc);
+      //      }
       const double* yz = pnt->GetYZTracking();
       const double* errYZ = pnt->GetYZErrTracking();
       double chi = trc.getPredictedChi2(yz, errYZ);
@@ -1331,7 +1333,7 @@ Bool_t AliAlgTrack::ResidKalman()
     ws[2] = trc.getSigmaY2();
     ws[3] = trc.getSigmaZY();
     ws[4] = trc.getSigmaZ2();
-    double chi = trc.getPredictedChi2(yz, errYZ);
+    double chi = 0; //trc.getPredictedChi2(yz, errYZ); // RS TOFIX
     //    printf("<< OUT%d (%9d): %+.2e %+.2e | %+.2e %+.2e %+.2e %+.2e %+.2e | %.2e %d \n",ip,pnt->GetSensor()->GetInternalID(),yz[0],yz[1], ws[0],ws[1],ws[2],ws[3],ws[4],chi,inv);
     //    printf("<<Bef ");    trc.print();
     if (!trc.update(yz, errYZ)) {

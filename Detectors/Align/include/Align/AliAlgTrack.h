@@ -108,7 +108,6 @@ class AliAlgTrack : public trackParam_t, public TObject
   //
   void ImposePtBOff(double pt) { setQ2Pt(1. / pt); }
   // propagation methods
-  void CopyFrom(const trackParam_t* etp);
   Bool_t ApplyMatCorr(trackParam_t& trPar, const Double_t* corrDiag, const AliAlgPoint* pnt);
   Bool_t ApplyMatCorr(trackParam_t* trSet, int ntr, const Double_t* corrDiaf, const AliAlgPoint* pnt);
   Bool_t ApplyMatCorr(trackParam_t& trPar, const Double_t* corrpar);
@@ -252,12 +251,6 @@ inline void AliAlgTrack::ModParam(trackParam_t* trSet, int ntr, int par, double 
   }
 }
 
-//______________________________________________
-inline void AliAlgTrack::CopyFrom(const trackParam_t* etp)
-{
-  // assign kinematics
-  set(etp->getX(), etp->getAlpha(), etp->getParams(), etp->getCov().data());
-}
 } // namespace align
 } // namespace o2
 #endif

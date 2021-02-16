@@ -691,6 +691,27 @@ GPUd() auto TrackParametrizationWithError<value_T>::getPredictedChi2(const dim2_
   return (d * (szz * d - sdz * z) + z * (sdd * z - d * sdz)) / det;
 }
 
+//______________________________________________
+// RS TOFIX : temporary, eventually the AliAlgPoint should use dim2_t and dim3_t for pos and cov
+template <typename value_T>
+GPUd() auto TrackParametrizationWithError<value_T>::getPredictedChi2(const value_t* p, const value_t* cov) const -> value_t
+{
+  // Estimate the chi2 of the space point "p" with the cov. matrix "cov"
+  auto sdd = static_cast<double>(getSigmaY2()) + static_cast<double>(cov[0]);
+  auto sdz = static_cast<double>(getSigmaZY()) + static_cast<double>(cov[1]);
+  auto szz = static_cast<double>(getSigmaZ2()) + static_cast<double>(cov[2]);
+  auto det = sdd * szz - sdz * sdz;
+
+  if (gpu::CAMath::Abs(det) < constants::math::Almost0) {
+    return constants::math::VeryBig;
+  }
+
+  value_t d = this->getY() - p[0];
+  value_t z = this->getZ() - p[1];
+
+  return (d * (szz * d - sdz * z) + z * (sdd * z - d * sdz)) / det;
+}
+
 #if !defined(GPUCA_GPUCODE) && !defined(GPUCA_STANDALONE) // Disable function relying on ROOT SMatrix on GPU
 
 //______________________________________________
