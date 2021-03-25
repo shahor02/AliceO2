@@ -35,7 +35,6 @@ class CosmicInfo
   float mT1;
   float mT2;
 
-  
  public:
   int getCH1() const { return mChan1; }
   int getCH2() const { return mChan2; }
@@ -55,8 +54,7 @@ class CosmicInfo
   void setT2(float val) { mT2 = val; }
   void setL(float val) { mL = val; }
 
-  CosmicInfo(int ch1 = 0, int ch2 = 0, float dt = 0, float tot1 = 0, float tot2 = 0, float l = 0, float tm1=0, float tm2=0) :
-    mChan1(ch1), mChan2(ch2), mDtime(dt), mTot1(tot1), mTot2(tot2), mL(l), mT1(tm1), mT2(tm2) {}
+  CosmicInfo(int ch1 = 0, int ch2 = 0, float dt = 0, float tot1 = 0, float tot2 = 0, float l = 0, float tm1 = 0, float tm2 = 0) : mChan1(ch1), mChan2(ch2), mDtime(dt), mTot1(tot1), mTot2(tot2), mL(l), mT1(tm1), mT2(tm2) {}
 
   ClassDefNV(CosmicInfo, 2);
 };

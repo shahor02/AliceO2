@@ -34,7 +34,7 @@ void CosmicProcessor::process(DigitDataReader& reader, bool fill)
 
   reader.init();
   const o2::raw::HBFUtils& hbfutils = o2::raw::HBFUtils::Instance();
-  
+
   auto array = reader.getDigitArray();
   int ndig = array->size();
   int ndig2 = ndig * fill;
@@ -60,8 +60,8 @@ void CosmicProcessor::process(DigitDataReader& reader, bool fill)
     Geo::getVolumeIndices(ch1, volID1);
     Geo::getPos(volID1, pos1);
 
-    float tm1 = (dig1.getIR().differenceInBC(ir0)*1024+tdc1)*Geo::TDCBIN; // in ps
-    
+    float tm1 = (dig1.getIR().differenceInBC(ir0) * 1024 + tdc1) * Geo::TDCBIN; // in ps
+
     for (int j = i + 1; j < ndig2; j++) {
       auto& dig2 = (*array)[j];
       int64_t bc2 = int64_t(dig2.getBC()) - bc1;
@@ -73,8 +73,8 @@ void CosmicProcessor::process(DigitDataReader& reader, bool fill)
       if (mCounters[ch2] > 3) {
         continue;
       }
-      float tm2 = (dig2.getIR().differenceInBC(ir0)*1024+int(dig2.getTDC()))*Geo::TDCBIN; // in ps
-      
+      float tm2 = (dig2.getIR().differenceInBC(ir0) * 1024 + int(dig2.getTDC())) * Geo::TDCBIN; // in ps
+
       int tdc2 = int(dig2.getTDC()) - tdc1;
       float tot2 = dig2.getTOT() * 48.8E-3;
       Geo::getVolumeIndices(ch2, volID2);
