@@ -603,7 +603,7 @@ bool MatchTPCITS::prepareTPCData()
   std::function<bool(const o2::track::TrackParCov& _tr, float t0, float terr, GTrackID _origID)> creator = [this](const o2::track::TrackParCov& _tr, float t0, float terr, GTrackID _origID) {
     auto srcID = _origID.getSource();
     if (srcID == GTrackID::ITS) { // we don't need ITS here
-      return true;                // we don't need TPC tracks
+      return true;
     }
     // make sure the track was propagated to inner TPC radius at the ref. radius
     if (_tr.getX() > o2::constants::geom::XTPCInnerRef + 0.1 || std::abs(_tr.getQ2Pt()) > mMinTPCTrackPtInv) {
