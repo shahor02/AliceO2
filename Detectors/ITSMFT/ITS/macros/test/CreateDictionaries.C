@@ -4,7 +4,6 @@
 #if !defined(__CLING__) || defined(__ROOTCLING__)
 #include <TAxis.h>
 #include <TCanvas.h>
-#include <TSystem.h>
 #include <TFile.h>
 #include <TH1F.h>
 #include <TH2F.h>
@@ -15,7 +14,7 @@
 #include <TStopwatch.h>
 #include <fstream>
 #include <string>
-
+#include <filesystem>
 #include "MathUtils/Utils.h"
 #include "ITSBase/GeometryTGeo.h"
 #include "ITSMFTReconstruction/BuildTopologyDictionary.h"
@@ -79,7 +78,7 @@ void CreateDictionaries(bool saveDeltas = false,
   TFile* fileH = nullptr;
   TTree* hitTree = nullptr;
 
-  if (!hitfile.empty() && !collContextfile.empty() && !gSystem->AccessPathName(hitfile.c_str()) && !gSystem->AccessPathName(collContextfile.c_str())) {
+  if (!hitfile.empty() && !collContextfile.empty() && std::filesystem::exists(hitfile) && std::filesystem::exists(collContextfile)) {
     fileH = TFile::Open(hitfile.data());
     hitTree = (TTree*)fileH->Get("o2sim");
     mc2hitVec.resize(hitTree->GetEntries());

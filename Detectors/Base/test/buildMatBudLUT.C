@@ -20,6 +20,7 @@
 #include <TFile.h>
 #include <TSystem.h>
 #include <TStopwatch.h>
+#include <filesystem>
 #endif
 
 #ifndef GPUCA_ALIGPUCODE // this part is unvisible on GPU version
@@ -48,7 +49,7 @@ void configLayers();
 bool buildMatBudLUT(int nTst, int maxLr, std::string outName, std::string outFile, std::string geomNameInput)
 {
   auto geomName = o2::base::NameConf::getGeomFileName(geomNameInput);
-  if (gSystem->AccessPathName(geomName.c_str())) { // if needed, create geometry
+  if (!std::filesystem::exists(geomName)) { // if needed, create geometry
     std::cout << geomName << " does not exist. Will create it\n";
     gSystem->Exec("$O2_ROOT/bin/o2-sim -n 0");
   }
