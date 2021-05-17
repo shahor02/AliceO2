@@ -64,3 +64,19 @@ o2-dcs-proxy --dcs-proxy '--channel-config "name=dcs-proxy,type=pull,method=conn
 
 
 
+# dcs-config proxy
+
+This is a proxy to import the detector configuration files from DCS server into the DPL. A simple test is
+
+```
+DET="TOF"
+CHANFROM='"type=sub,method=connect,address=tcp://127.0.0.1:5556,rateLogging=1,transport=zeromq"'
+CHANACK='"type=push,method=connect,address=tcp://127.0.0.1:5557,rateLogging=1,transport=zeromq"'
+o2-dcs-config-proxy --subscribe-to $CHANFROM --acknowlege-to $CHANACK | o2-dcs-config-consumer-test-workflow --detector $DET
+```
+
+to receive from the `CHANFROM` DCS channel the configuration file name (starting with detector name) and the file itself and inject them as DPL messages with specs
+`<DET>/DCS_CONFIG_NAME/0` and `<DET>/DCS_CONFIG_FILE/0` respectively.
+The `o2-dcs-config-consumer-test-workflow` is a dummy processing device which just consumes such messages for the detector `<DET>`.
+
+If the `CHANACK` string is non empty, then the acknowledgment string `OK` will be sent to this channel on every reception of the DCS message.
