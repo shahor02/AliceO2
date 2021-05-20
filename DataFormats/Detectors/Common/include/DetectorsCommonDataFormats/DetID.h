@@ -134,8 +134,7 @@ class DetID
 
   inline static constexpr int nameToID(char const* name, int id)
   {
-    return id > Last ? -1 : sameStr(name, sDetNames[id]) ? id
-                                                         : nameToID(name, id + 1);
+    return id > Last ? -1 : sameStr(name, sDetNames[id]) ? id : nameToID(name, id + 1);
   }
 
 #endif // GPUCA_GPUCODE_DEVICE
