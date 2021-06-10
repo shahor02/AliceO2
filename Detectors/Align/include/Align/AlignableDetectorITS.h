@@ -19,15 +19,20 @@
 
 #include "Align/AlignableDetector.h"
 #include "Align/utils.h"
+#include "ReconstructionDataFormats/TrackParametrizationWithError.h"
 
 namespace o2
 {
 namespace align
 {
 
+class Controller;
+
 class AlignableDetectorITS : public AlignableDetector
 {
  public:
+  using Track = o2::track::TrackParD;
+
   //
   enum ITSSel_t { kSPDNoSel,
                   kSPDBoth,
@@ -36,17 +41,19 @@ class AlignableDetectorITS : public AlignableDetector
                   kSPD1,
                   kNSPDSelTypes };
   //
-  AlignableDetectorITS(const char* title = "");
+  AlignableDetectorITS() = default;
+  AlignableDetectorITS(Controller* ctr);
   virtual ~AlignableDetectorITS();
   //
-  virtual void defineVolumes();
+  virtual void defineVolumes() override;
   //
-  bool AcceptTrack(const AliESDtrack* trc, int trtype) const;
+  // RSTODO
+  //  bool AcceptTrack(const AliESDtrack* trc, int trtype) const;
 
   void SetAddErrorLr(int ilr, double sigY, double sigZ);
   void SetSkipLr(int ilr);
   //
-  virtual void UpdatePointByTrackInfo(AlignmentPoint* pnt, const AliExternalTrackParam* t) const;
+  virtual void UpdatePointByTrackInfo(AlignmentPoint* pnt, const Track& t) const;
   virtual void setUseErrorParam(int v = 1);
   void SetITSSelPattern(int trtype, ITSSel_t sel) { fITSPatt[trtype] = sel; }
   void SetITSSelPatternColl(ITSSel_t sel = kSPDAny) { SetITSSelPattern(utils::Coll, sel); }
@@ -58,12 +65,9 @@ class AlignableDetectorITS : public AlignableDetector
   //
   virtual void Print(const Option_t* opt = "") const;
   //
-  static bool CheckHitPattern(const AliESDtrack* trc, int sel);
   static const char* GetITSPattName(int sel) { return sel < kNSPDSelTypes ? fgkHitsSel[sel] : 0; }
   //
  protected:
-  //
-  void GetErrorParamAngle(int layer, double tgl, double tgphitr, double& erry, double& errz) const;
   //
   // -------- dummies --------
   AlignableDetectorITS(const AlignableDetectorITS&);

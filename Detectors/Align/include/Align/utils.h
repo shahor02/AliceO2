@@ -174,7 +174,7 @@ inline constexpr bool smaller(F d, F tolD) noexcept
 }
 
 //_________________________________________________________________________________
-inline constexpr int numberOfBitsSet(uint32_t x) noexcept
+inline constexpr int numberOfBitsSet(uint32_t x) noexcept //RSREM
 {
   // count number of non-0 bits in 32bit word
   x = x - ((x >> 1) & 0x55555555);
