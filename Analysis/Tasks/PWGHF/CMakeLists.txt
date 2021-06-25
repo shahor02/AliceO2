@@ -11,7 +11,7 @@
 
 o2_add_dpl_workflow(hf-track-index-skims-creator
                     SOURCES HFTrackIndexSkimsCreator.cxx
-                    PUBLIC_LINK_LIBRARIES O2::Framework O2::AnalysisDataModel O2::AnalysisCore O2::DetectorsVertexing O2::AnalysisTasksUtils ROOT::EG
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2::AnalysisDataModel O2::AnalysisCore O2::DetectorsVertexing O2::AnalysisTasksUtils ROOT::EG KFParticle::KFParticle
                     COMPONENT_NAME Analysis)
 
 o2_add_dpl_workflow(hf-candidate-creator-2prong

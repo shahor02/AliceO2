@@ -156,4 +156,9 @@ find_package(O2GPU)
 
 find_package(FastJet)
 
+if(BUILD_ANALYSIS)
+find_package(KFParticle)
+set_package_properties(KFParticle PROPERTIES TYPE REQUIRED)  
+endif()
+
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
