@@ -30,7 +30,7 @@ struct MatchTPCITSParams : public o2::conf::ConfigurableParamHelper<MatchTPCITSP
                             Prefer,
                             Require }; // flags for usage of FT0 in match validation
 
-  bool runAfterBurner = false;                    ///< run afterburner for TPCtrack-ITScluster matching
+  bool runAfterBurner = true;                     ///< run afterburner for TPCtrack-ITScluster matching
   ValidateMatchByFIT validateMatchByFIT = Prefer; ///< when comparing ITS-TPC matches, prefer those which have time of Interaction Candidate
   float crudeAbsDiffCut[o2::track::kNParams] = {2.f, 2.f, 0.2f, 0.2f, 4.f};
   float crudeNSigma2Cut[o2::track::kNParams] = {49.f, 49.f, 49.f, 49.f, 49.f};

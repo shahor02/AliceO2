@@ -164,8 +164,8 @@ DataProcessorSpec getTPCITSMatchingSpec(GTrackID::mask_t src, bool useFT0, bool 
   auto dataRequest = std::make_shared<DataRequest>();
 
   dataRequest->requestTracks(src, useMC);
-  dataRequest->requestClusters(GTrackID::getSourcesMask("ITS,TPC"), false); // Only ITS and TPC and no MC labels for clusters needed: refit only
-
+  dataRequest->requestTPCClusters(false);
+  dataRequest->requestITSClusters(useMC); // Only ITS clusters labels are needed for the afterburner
   if (useFT0) {
     dataRequest->requestFT0RecPoints(false);
   }
@@ -176,7 +176,6 @@ DataProcessorSpec getTPCITSMatchingSpec(GTrackID::mask_t src, bool useFT0, bool 
   }
 
   if (useMC) {
-    dataRequest->inputs.emplace_back("clusITSMCTR", "ITS", "CLUSTERSMCTR", 0, Lifetime::Timeframe); // for afterburner
     outputs.emplace_back("GLO", "TPCITS_MC", 0, Lifetime::Timeframe);
   }
 
