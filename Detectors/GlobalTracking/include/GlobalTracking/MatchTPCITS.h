@@ -126,6 +126,10 @@ struct TrackLocTPC : public o2::track::TrackParCov {
   {
     return constraint == Constrained ? time0 : (constraint == ASide ? time0 + dt : time0 - dt);
   }
+  float getSignedDT(float dt) const // account for TPC side in time difference for dt=external_time - tpc.time0
+  {
+    return constraint == Constrained ? 0. : (constraint == ASide ? dt : -dt);
+  }
 
   ClassDefNV(TrackLocTPC, 1);
 };
@@ -164,6 +168,13 @@ struct MatchRecord {
   {
     return isBetter(other.chi2, other.matchedIC);
   }
+};
+
+// AB primary seed: TPC track propagated to outermost ITS layer under specific InteractionCandidate hypothesis
+struct TPCABSeed {
+  int tpcWID = MinusOne;  ///< TPC track ID
+  int ICCanID = MinusOne; ///< interaction candidate ID (they are sorted in increasing time)
+  o2::track::TrackParCov track{};
 };
 
 ///< Link of the AfterBurner track: update at sertain cluster
@@ -517,6 +528,9 @@ class MatchTPCITS
     return delta > toler ? rejFlag : (delta < -toler ? -rejFlag : Accept);
   }
 
+  // ========================= AFTERBURNER =========================
+  int prepareABSeeds();
+
   //================================================================
 
   bool mInitDone = false;  ///< flag init already done
@@ -613,6 +627,9 @@ class MatchTPCITS
   std::vector<float> mWinnerChi2Refit; ///< vector of refitChi2 for winners
 
   std::deque<ITSChipClustersRefs> mITSChipClustersRefs; ///< range of clusters for each chip in ITS (for AfterBurner)
+
+  // ------------------------------
+  std::vector<TPCABSeed> mTPCABSeeds; ///< pool of primary TPC seeds for AB
 
   std::vector<ABTrackLinksList> mABTrackLinksList; ///< pool of ABTrackLinksList objects for every TPC track matched by AB
   std::vector<ABTrackLink> mABTrackLinks;          ///< pool AB track links

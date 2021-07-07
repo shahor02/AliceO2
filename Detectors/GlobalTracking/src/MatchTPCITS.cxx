@@ -1560,6 +1560,73 @@ bool MatchTPCITS::refitTPCInward(o2::track::TrackParCov& trcIn, float& chi2, flo
 
 //>>============================= AfterBurner for TPC-track / ITS cluster matching ===================>>
 //______________________________________________
+int MatchTPCITS::prepareABSeeds()
+{
+  ///< select TPC tracks to be considered in afterburner
+  mTPCABSeeds.clear();
+
+  mTPCABIndexCache.clear();
+  mTPCABTimeBinStart.clear();
+  const auto& outerLr = mRGHelper.layers.back();
+  // to avoid difference between 3D field propagation and Bz-bazed getXatLabR we propagate RMax+margin
+  const float ROuter = outerLr.rRange.getMax() + 0.5f;
+  auto propagator = o2::base::Propagator::Instance();
+
+  for (int iTPC = 0; iTPC < (int)mTPCWork.size(); iTPC++) {
+    auto& tTPC = mTPCWork[iTPC];
+    if (isDisabledTPC(tTPC)) {
+      // Popagate to the vicinity of the out layer. Note: the Z of the track might be uncertain,
+      // in this case the material corrections will be correct only in the limit of their uniformity in Z,
+      // which should be good assumption....
+      float xTgt;
+      if (!tTPC.getXatLabR(ROuter, xTgt, propagator->getNominalBz(), o2::track::DirInward) ||
+          !propagator->PropagateToXBxByBz(tTPC, xTgt, MaxSnp, 2., mUseMatCorrFlag)) {
+        continue;
+      }
+      mTPCABIndexCache.push_back(iTPC);
+    }
+  }
+  // sort tracks according to their timeMin
+  LOG(INFO) << "Sorting " << mTPCABIndexCache.size() << " selected TPC tracks for AfterBurner in tMin";
+  std::sort(mTPCABIndexCache.begin(), mTPCABIndexCache.end(), [this](int a, int b) {
+    auto& trcA = mTPCWork[a];
+    auto& trcB = mTPCWork[b];
+    return (trcA.tBracket.getMin() - trcB.tBracket.getMin()) < 0.;
+  });
+
+  float maxTDriftSafe = tpcTimeBin2MUS(mNTPCBinsFullDrift + mParams->safeMarginTPCITSTimeBin + mTPCTimeEdgeTSafeMargin);
+  int nIntCand = mInteractions.size(), nTPCCand = mTPCABIndexCache.size();
+  int tpcStart = 0;
+  for (int ic = 0; ic < nIntCand; ic++) {
+    const auto& intCand = mInteractions[ic];
+    auto tic = intCand.tBracket.mean();
+    for (int it = tpcStart; it < nTPCCand; it++) {
+      auto& trc = mTPCWork[mTPCABIndexCache[it]];
+      auto cmp = trc.tBracket.isOutside(intCand.tBracket);
+      if (cmp > 0) {
+        break; // all other TPC tracks will be also in future wrt the interaction
+      }
+      if (cmp < 0) {
+        if (trc.tBracket.getMin() + maxTDriftSafe < intCand.tBracket.getMin()) {
+          tpcStart++; // all following int.candidates would be in future wrt this track
+        }
+        continue;
+      }
+      // we beed to create seed from this TPC track and interaction candidate
+      float dt = trc.getSignedDT(tic - trc.time0);
+      float dz = dt * mTPCVDrift0, z = trc.getZ() + dz;
+      if (outerLr.zRange.isOutside(z, std::sqrt(trc.getSigmaZ2()) + 2.)) { // RS FIXME introduce margin as parameter?
+        continue;
+      }
+      // make sure seed crosses the outer ITS layer (with some margin)
+      auto& seed = mTPCABSeeds.emplace_back(TPCABSeed{mTPCABIndexCache[it], ic, trc});
+      seed.track.setZ(z); // RS FIXME : in case of distortions and large dz the track must be refitted
+    }
+  }
+  return mTPCABIndexCache.size();
+}
+
+//______________________________________________
 int MatchTPCITS::prepareTPCTracksAfterBurner()
 {
   ///< select TPC tracks to be considered in afterburner
@@ -1691,6 +1758,70 @@ void MatchTPCITS::runAfterBurner()
   }
   // tmp
 }
+
+/*
+// old version
+//______________________________________________
+void MatchTPCITS::runAfterBurner()
+{
+  mABTrackLinks.clear();
+
+  int nIntCand = mInteractions.size();
+  int nTPCCand = prepareTPCTracksAfterBurner();
+  LOG(INFO) << "AfterBurner will check " << nIntCand << " interaction candindates for " << nTPCCand << " TPC tracks";
+  if (!nIntCand || !nTPCCand) {
+    return;
+  }
+  int iC = 0;                                // interaction candindate to consider and result of its time-bracket comparison to TPC track
+  int iCClean = iC;                          // id of the next candidate whose cache to be cleaned
+  for (int itr = 0; itr < nTPCCand; itr++) { // TPC track indices are sorted in tMin
+    const auto& tTPC = mTPCWork[mTPCABIndexCache[itr]];
+    // find 1st interaction candidate compatible with time brackets of this track
+    int iCRes;
+    while ((iCRes = tTPC.tBracket.isOutside(mInteractions[iC].tBracket)) < 0 && ++iC < nIntCand) { // interaction precedes the track time-bracket
+      cleanAfterBurnerClusRefCache(iC, iCClean);                                                   // if possible, clean unneeded cached cluster references
+    }
+    if (iCRes == 0) {
+      int iCStart = iC, iCEnd = iC; // check all interaction candidates matching to this TPC track
+      do {
+        if (!mInteractions[iCEnd].clRefPtr) { // if not done yet, fill sorted cluster references for interaction candidate
+          mInteractions[iCEnd].clRefPtr = &mITSChipClustersRefs.emplace_back();
+          fillClustersForAfterBurner(mITSChipClustersRefs.back(), mInteractions[iCEnd].rofITS);
+          // tst
+          int ncl = mITSChipClustersRefs.back().clusterID.size();
+        }
+      } while (++iCEnd < nIntCand && !tTPC.tBracket.isOutside(mInteractions[iCEnd].tBracket));
+
+      auto lbl = mTPCLblWork[mTPCABIndexCache[itr]]; // tmp
+      if (runAfterBurner(mTPCABIndexCache[itr], iCStart, iCEnd)) {
+        lbl.print(); // tmp
+        //tmp
+        if (tTPC.matchID > MinusOne) {
+          printf("AB Matching tree for TPC WID %d and IC %d : %d\n", mTPCABIndexCache[itr], iCStart, iCEnd);
+          auto& llinks = mABTrackLinksList[tTPC.matchID];
+          printABTracksTree(llinks);
+        }
+      }
+    } else if (iCRes > 0) {
+      continue; // TPC track precedes the interaction (means orphan track?), no need to check it
+    } else {
+      LOG(INFO) << "All interaction candidates precede track " << itr << " [" << tTPC.tBracket.getMin() << ":" << tTPC.tBracket.getMax() << "]";
+      break; // all interaction candidates precede TPC track
+    }
+  }
+  buildABCluster2TracksLinks();
+  selectBestMatchesAB(); // validate matches which are good in both ways: TPCtrack->ITSclusters and ITSclusters->TPCtrack
+
+  // tmp
+  if (mDBGOut) {
+    for (const auto& llinks : mABTrackLinksList) {
+      dumpABTracksDebugTree(llinks);
+    }
+  }
+  // tmp
+}
+
+*/
 
 //______________________________________________
 bool MatchTPCITS::runAfterBurner(int tpcWID, int iCStart, int iCEnd)
