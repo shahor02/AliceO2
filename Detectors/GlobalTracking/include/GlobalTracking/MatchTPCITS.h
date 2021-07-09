@@ -170,31 +170,17 @@ struct MatchRecord {
   }
 };
 
-// AB primary seed: TPC track propagated to outermost ITS layer under specific InteractionCandidate hypothesis
-struct TPCABSeed {
-  int tpcWID = MinusOne;  ///< TPC track ID
-  int ICCanID = MinusOne; ///< interaction candidate ID (they are sorted in increasing time)
-  o2::track::TrackParCov track{};
-};
-
 ///< Link of the AfterBurner track: update at sertain cluster
 ///< original track in the currently loaded TPC reco output
 struct ABTrackLink : public o2::track::TrackParCov {
   static constexpr int Disabled = -2;
-  int clID = MinusOne;     ///< ID of the attached cluster, MinusTen is for dummy layer above Nlr, MinusOne: no attachment on this layer
+  int clID = MinusOne;     ///< ID of the attached cluster, MinusOne: no attachment on this layer
   int parentID = MinusOne; ///< ID of the parent link (on prev layer) or parent TPC seed
   int nextOnLr = MinusOne; ///< ID of the next (in quality) link on the same layer
-  int icCandID = MinusOne; ///< ID of the interaction candidate this track belongs to
   uint8_t nDaughters = 0;  ///< number of daughter links on lower layers
   int8_t layerID = -1;     ///< layer ID
   uint8_t ladderID = 0xff; ///< ladder ID in the layer (used for seeds with 2 hits in the layer)
   float chi2 = 0.f;        ///< chi2 after update
-#ifdef _ALLOW_DEBUG_AB_
-  o2::track::TrackParCov seed; // seed before update
-#endif
-  ABTrackLink() = default;
-  ABTrackLink(const o2::track::TrackParCov& src, int ic, int lr, int parid = MinusOne, int clid = MinusOne, float ch2 = 0.f)
-    : o2::track::TrackParCov(src), clID(clid), parentID(parid), icCandID(ic), layerID(lr), chi2(ch2) {}
   bool isDisabled() const { return clID == Disabled; }
   void disable() { clID = Disabled; }
   bool isDummyTop() const { return clID == MinusTen; }
@@ -202,16 +188,19 @@ struct ABTrackLink : public o2::track::TrackParCov {
   float chi2NormPredict(float chi2cl) const { return (chi2 + chi2cl) / (1 + o2::its::RecoGeomHelper::getNLayers() - layerID); }
 };
 
-struct ABTrackLinksList {
-  int trackID = MinusOne;                                     ///< TPC work track id
-  int firstLinkID = MinusOne;                                 ///< 1st link added (used for fast clean-up)
-  int bestOrdLinkID = MinusOne;                               ///< start of sorted list of ABOrderLink for final validation
-  int8_t lowestLayer = o2::its::RecoGeomHelper::getNLayers(); // lowest layer reached
-  int8_t status = MinusOne;                                   ///< status (RS TODO)
-  std::array<int, o2::its::RecoGeomHelper::getNLayers() + 1> firstInLr;
-  ABTrackLinksList(int id = MinusOne) : trackID(id)
+struct ABSeedHypTree {
+  int trackID = MinusOne;                                           ///< TPC work track id
+  int firstLinkID = MinusOne;                                       ///< 1st link added (used for fast clean-up)
+  int bestOrdLinkID = MinusOne;                                     ///< start of sorted list of ABOrderLink for final validation
+  int8_t lowestLayer = o2::its::RecoGeomHelper::getNLayers();       ///< lowest layer reached
+  int8_t status = MinusOne;                                         ///< status (RS TODO)
+  std::array<int, o2::its::RecoGeomHelper::getNLayers()> firstInLr; ///< entry of 1st (best) hypothesis on each layer
+  std::vector<ABTrackLink> trackLinks{};                            ///< links
+
+  ABSeedHypTree(int id = MinusOne) : trackID(id)
   {
     firstInLr.fill(MinusOne);
+    trackLinks.clear();
   }
   bool isDisabled() const { return status == MinusTen; } // RS is this strict enough
   void disable() { status = MinusTen; }
@@ -219,7 +208,16 @@ struct ABTrackLinksList {
   void validate() { status = Validated; }
 };
 
-struct ABOrderLink {          ///< link used for cross-layer sorting of best ABTrackLinks of the ABTrackLinksList
+// AB primary seed: TPC track propagated to outermost ITS layer under specific InteractionCandidate hypothesis
+struct TPCABSeed {
+  int tpcWID = MinusOne;           ///< TPC track ID
+  int ICCanID = MinusOne;          ///< interaction candidate ID (they are sorted in increasing time)
+  o2::track::TrackParCov track{};  ///< Seed propagated to the outer layer under certain time constraint
+  ABSeedHypTree hypTree{};         ///< matching hypotheses tree for this seed
+};
+
+
+struct ABOrderLink {          ///< link used for cross-layer sorting of best ABTrackLinks of the ABSeedHypTree
   int trackLinkID = MinusOne; ///< ABTrackLink ID
   int nextLinkID = MinusOne;  ///< indext on the next ABOrderLink
   ABOrderLink() = default;
@@ -271,10 +269,10 @@ struct ABClusterLink {
 };
 
 struct InteractionCandidate : public o2::InteractionRecord {
-  o2::math_utils::Bracketf_t tBracket;     // interaction time
-  int rofITS;                              // corresponding ITS ROF entry (in the ROFRecord vectors)
-  uint32_t flag;                           // origin, etc.
-  void* clRefPtr = nullptr;                // pointer on cluster references container (if any)
+  o2::math_utils::Bracketf_t tBracket;                   // interaction time
+  int rofITS;                                            // corresponding ITS ROF entry (in the ROFRecord vectors)
+  uint32_t flag;                                         // origin, etc.
+  o2::dataformats::RangeReference<int, int> seedsRef;    // references to AB seeds 
   InteractionCandidate() = default;
   InteractionCandidate(const o2::InteractionRecord& ir, float t, float dt, int rof, uint32_t f = 0) : o2::InteractionRecord(ir), tBracket(t - dt, t + dt), rofITS(rof), flag(f) {}
 };
@@ -328,21 +326,21 @@ class MatchTPCITS
   bool runAfterBurner(int tpcWID, int iCStart, int iCEnd);
   void buildABCluster2TracksLinks();
   float correctTPCTrack(o2::track::TrackParCov& trc, const TrackLocTPC& tTPC, const InteractionCandidate& cand) const;
-  int checkABSeedFromLr(int lrSeed, int seedID, ABTrackLinksList& llist);
+  int checkABSeedFromLr(int lrSeed, int seedID, ABSeedHypTree& llist);
   void accountForOverlapsAB(int lrSeed);
-  void mergeABSeedsOnOverlaps(int lr, ABTrackLinksList& llist);
-  ABTrackLinksList& createABTrackLinksList(int tpcWID);
-  ABTrackLinksList& getABTrackLinksList(int tpcWID) { return mABTrackLinksList[mTPCWork[tpcWID].matchID]; }
-  void disableABTrackLinksList(int tpcWID);
-  int registerABTrackLink(ABTrackLinksList& llist, const o2::track::TrackParCov& src, int ic, int lr, int parentID = -1, int clID = -1, float chi2Cl = 0.f);
-  void printABTracksTree(const ABTrackLinksList& llist) const;
+  void mergeABSeedsOnOverlaps(int lr, ABSeedHypTree& llist);
+  ABSeedHypTree& createABSeedHypTree(int tpcWID);
+  ABSeedHypTree& getABSeedHypTree(int tpcWID) { return mABSeedHypTree[mTPCWork[tpcWID].matchID]; }
+  void disableABSeedHypTree(int tpcWID);
+  int registerABTrackLink(ABSeedHypTree& hyptree, const o2::track::TrackParCov& trc, int clID, int parentID, int lr, int laddID, float chi2Cl);
+  void printABTracksTree(const ABSeedHypTree& llist) const;
   void printABClusterUsage() const;
   void selectBestMatchesAB();
   bool validateABMatch(int ilink);
   void buildBestLinksList(int ilink);
   bool isBetter(float chi2A, float chi2B) { return chi2A < chi2B; } // RS TODO
-  void dumpABTracksDebugTree(const ABTrackLinksList& llist);
-  void destroyLastABTrackLinksList();
+  void dumpABTracksDebugTree(const ABSeedHypTree& llist);
+  void destroyLastABSeedHypTree();
   void refitABTrack(int ibest) const;
   void setSkipTPCOnly(bool v) { mSkipTPCOnly = v; }
   void setCosmics(bool v) { mCosmics = v; }
@@ -448,8 +446,8 @@ class MatchTPCITS
   void addTPCSeed(const o2::track::TrackParCov& _tr, float t0, float terr, o2::dataformats::GlobalTrackID srcGID, int tpcID);
 
   int preselectChipClusters(std::vector<int>& clVecOut, const ClusRange& clRange, const ITSChipClustersRefs& clRefs,
-                            float trackY, float trackZ, float tolerY, float tolerZ, const o2::MCCompLabel& lblTrc) const;
-  void fillClustersForAfterBurner(ITSChipClustersRefs& refCont, int rofStart, int nROFs = 1);
+                            float trackY, float trackZ, float tolerY, float tolerZ) const;
+  void fillClustersForAfterBurner(int rofStart, int nROFs = 1);
   void cleanAfterBurnerClusRefCache(int currentIC, int& startIC);
   void flagUsedITSClusters(const o2::its::TrackITS& track, int rofOffset);
 
@@ -530,6 +528,8 @@ class MatchTPCITS
 
   // ========================= AFTERBURNER =========================
   int prepareABSeeds();
+  void processABSeed(int sid);
+  void followABSeed(o2::track::TrackParCov& tr, int trID, int lrID, ABSeedHypTree& hypTree);
 
   //================================================================
 
@@ -626,18 +626,18 @@ class MatchTPCITS
   MCLabContTr mITSLblWork;             ///< ITS track labels
   std::vector<float> mWinnerChi2Refit; ///< vector of refitChi2 for winners
 
-  std::deque<ITSChipClustersRefs> mITSChipClustersRefs; ///< range of clusters for each chip in ITS (for AfterBurner)
+  ITSChipClustersRefs mITSChipClustersRefs; ///< range of clusters for each chip in ITS (for AfterBurner)
 
   // ------------------------------
   std::vector<TPCABSeed> mTPCABSeeds; ///< pool of primary TPC seeds for AB
-
-  std::vector<ABTrackLinksList> mABTrackLinksList; ///< pool of ABTrackLinksList objects for every TPC track matched by AB
+  std::vector<ABSeedHypTree> mABSeedHypTree; ///< Hypotheses tree for every AB TPC seed
+  
+  
+  
   std::vector<ABTrackLink> mABTrackLinks;          ///< pool AB track links
   std::vector<ABClusterLink> mABClusterLinks;      ///< pool AB cluster links
-  std::vector<ABOrderLink> mABBestLinks;           ///< pool of ABOrder links for best links of the ABTrackLinksList
+  std::vector<ABOrderLink> mABBestLinks;           ///< pool of ABOrder links for best links of the ABSeedHypTree
   std::vector<int> mABClusterLinkIndex;            ///< index of 1st ABClusterLink for every cluster used by AfterBurner, -1: unused, -10: used by external ITS tracks
-  int mMaxABLinksOnLayer = 20;                     ///< max number of candidate links per layer
-  int mMaxABFinalHyp = 10;                         ///< max number of final hypotheses to consider
 
   ///< per sector indices of TPC track entry in mTPCWork
   std::array<std::vector<int>, o2::constants::math::NSectors> mTPCSectIndexCache;
@@ -662,7 +662,6 @@ class MatchTPCITS
   MCLabContTr mOutLabels; ///< Labels: = TPC labels with flag isFake set in case of fake matching
 
   o2::its::RecoGeomHelper mRGHelper; ///< helper for cluster and geometry access
-  float mITSFiducialZCut = 9999.;    ///< eliminate TPC seeds outside of this range
 
 #ifdef _ALLOW_DEBUG_TREES_
   std::unique_ptr<o2::utils::TreeStreamRedirector> mDBGOut;
@@ -710,14 +709,14 @@ inline bool MatchTPCITS::isDisabledITS(const TrackLocITS& t) const { return t.ma
 inline bool MatchTPCITS::isDisabledTPC(const TrackLocTPC& t) const { return t.matchID < 0; }
 
 //______________________________________________
-inline void MatchTPCITS::destroyLastABTrackLinksList()
+inline void MatchTPCITS::destroyLastABSeedHypTree()
 {
-  // Profit from the links of the last ABTrackLinksList having been added in the very end of mABTrackLinks
-  // and eliminate them also removing the last ABTrackLinksList.
+  // Profit from the links of the last ABSeedHypTree having been added in the very end of mABTrackLinks
+  // and eliminate them also removing the last ABSeedHypTree.
   // This method should not be called after buildABCluster2TracksLinks!!!
-  const auto& llist = mABTrackLinksList.back();
+  const auto& llist = mABSeedHypTree.back();
   mABTrackLinks.resize(llist.firstLinkID);
-  mABTrackLinksList.pop_back();
+  mABSeedHypTree.pop_back();
 }
 
 } // namespace globaltracking
