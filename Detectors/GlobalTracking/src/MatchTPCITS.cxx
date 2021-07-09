@@ -1562,11 +1562,13 @@ bool MatchTPCITS::refitTPCInward(o2::track::TrackParCov& trcIn, float& chi2, flo
 //______________________________________________
 int MatchTPCITS::prepareABSeeds()
 {
-  ///< select TPC tracks to be considered in afterburner
+  ///< select TPC tracks to be considered in afterburner, clone them as seeds for every matching interaction candidate
+  TStopwatch sw; // RSTMP
+  sw.Start(); //RSTMP
+
   mTPCABSeeds.clear();
 
   mTPCABIndexCache.clear();
-  mTPCABTimeBinStart.clear();
   const auto& outerLr = mRGHelper.layers.back();
   // to avoid difference between 3D field propagation and Bz-bazed getXatLabR we propagate RMax+margin
   const float ROuter = outerLr.rRange.getMax() + 0.5f;
@@ -1587,7 +1589,6 @@ int MatchTPCITS::prepareABSeeds()
     }
   }
   // sort tracks according to their timeMin
-  LOG(INFO) << "Sorting " << mTPCABIndexCache.size() << " selected TPC tracks for AfterBurner in tMin";
   std::sort(mTPCABIndexCache.begin(), mTPCABIndexCache.end(), [this](int a, int b) {
     auto& trcA = mTPCWork[a];
     auto& trcB = mTPCWork[b];
@@ -1603,10 +1604,10 @@ int MatchTPCITS::prepareABSeeds()
     for (int it = tpcStart; it < nTPCCand; it++) {
       auto& trc = mTPCWork[mTPCABIndexCache[it]];
       auto cmp = trc.tBracket.isOutside(intCand.tBracket);
-      if (cmp > 0) {
+      if (cmp < 0) {
         break; // all other TPC tracks will be also in future wrt the interaction
       }
-      if (cmp < 0) {
+      if (cmp > 0) {
         if (trc.tBracket.getMin() + maxTDriftSafe < intCand.tBracket.getMin()) {
           tpcStart++; // all following int.candidates would be in future wrt this track
         }
@@ -1623,6 +1624,9 @@ int MatchTPCITS::prepareABSeeds()
       seed.track.setZ(z); // RS FIXME : in case of distortions and large dz the track must be refitted
     }
   }
+
+  sw.Stop(); //RSTMP
+  LOGP(INFO, "Created {} seeds from {} TPC tracks and {} interaction candidates in {} s", mTPCABSeeds.size(), mTPCABIndexCache.size(), nIntCand, sw.CpuTime());
   return mTPCABIndexCache.size();
 }
 
@@ -1703,7 +1707,10 @@ int MatchTPCITS::prepareInteractionTimes()
 void MatchTPCITS::runAfterBurner()
 {
   mABTrackLinks.clear();
+  prepareABSeeds();
 
+  return; /// RS FIXME
+  
   int nIntCand = mInteractions.size();
   int nTPCCand = prepareTPCTracksAfterBurner();
   LOG(INFO) << "AfterBurner will check " << nIntCand << " interaction candindates for " << nTPCCand << " TPC tracks";
