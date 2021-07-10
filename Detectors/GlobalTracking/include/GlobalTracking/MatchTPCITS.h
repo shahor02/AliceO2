@@ -447,7 +447,7 @@ class MatchTPCITS
   int prepareTPCTracksAfterBurner();
   void addTPCSeed(const o2::track::TrackParCov& _tr, float t0, float terr, o2::dataformats::GlobalTrackID srcGID, int tpcID);
 
-  int preselectChipClusters(std::vector<int>& clVecOut, const ClusRange& clRange, const ITSChipClustersRefs& clRefs,
+  int preselectChipClusters(std::vector<int>& clVecOut, const ClusRange& clRange,
                             float trackY, float trackZ, float tolerY, float tolerZ) const;
   void fillClustersForAfterBurner(int rofStart, int nROFs = 1);
   void flagUsedITSClusters(const o2::its::TrackITS& track, int rofOffset);
@@ -531,7 +531,7 @@ class MatchTPCITS
   void runAfterBurner();
   int prepareABSeeds();
   void processABSeed(int sid);
-  void followABSeed(o2::track::TrackParCov& tr, int trID, int lrID, ABSeedHypTree& hypTree);
+  int followABSeed(const o2::track::TrackParCov& seed, int seedID, int lrID, ABSeedHypTree& hypTree);
   int registerABTrackLink(ABSeedHypTree& hyptree, const o2::track::TrackParCov& trc, int clID, int parentID, int lr, int laddID, float chi2Cl);
   bool isBetter(float chi2A, float chi2B) { return chi2A < chi2B; } // RS FIMXE TODO 
 
@@ -640,9 +640,9 @@ class MatchTPCITS
   
   
   
-  std::vector<ABTrackLink> mABTrackLinks;          ///< pool AB track links
-  std::vector<ABClusterLink> mABClusterLinks;      ///< pool AB cluster links
-  std::vector<ABOrderLink> mABBestLinks;           ///< pool of ABOrder links for best links of the ABSeedHypTree
+  //std::vector<ABTrackLink> mABTrackLinks;          ///< pool AB track links
+  //std::vector<ABClusterLink> mABClusterLinks;      ///< pool AB cluster links
+  //std::vector<ABOrderLink> mABBestLinks;           ///< pool of ABOrder links for best links of the ABSeedHypTree
   std::vector<int> mABClusterLinkIndex;            ///< index of 1st ABClusterLink for every cluster used by AfterBurner, -1: unused, -10: used by external ITS tracks
 
   ///< per sector indices of TPC track entry in mTPCWork
@@ -714,16 +714,6 @@ inline bool MatchTPCITS::isDisabledITS(const TrackLocITS& t) const { return t.ma
 //______________________________________________
 inline bool MatchTPCITS::isDisabledTPC(const TrackLocTPC& t) const { return t.matchID < 0; }
 
-//______________________________________________
-inline void MatchTPCITS::destroyLastABSeedHypTree()
-{
-  // Profit from the links of the last ABSeedHypTree having been added in the very end of mABTrackLinks
-  // and eliminate them also removing the last ABSeedHypTree.
-  // This method should not be called after buildABCluster2TracksLinks!!!
-  const auto& llist = mABSeedHypTree.back();
-  mABTrackLinks.resize(llist.firstLinkID);
-  mABSeedHypTree.pop_back();
-}
 
 } // namespace globaltracking
 } // namespace o2
