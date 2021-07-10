@@ -1824,6 +1824,7 @@ void MatchTPCITS::processABSeed(int sid)
       // RS FIXME account for possibility of missing a layer
     }
   }
+  LOG(INFO) << "seed " << sid << " last lr: " << int(seedCont.hypTree.lowestLayer);
 }
 
 //______________________________________________
@@ -2289,8 +2290,8 @@ int MatchTPCITS::registerABTrackLink(ABSeedHypTree& hyptree, const o2::track::Tr
           hyptree.trackLinks[topID].nextOnLr = lnkID; // point from previous one
         }
         return lnkID;
-      } else {                                     // max number of candidates reached, will overwrite the last one
-        nextLink = ABTrackLink{trc, clID, parentID, nextID, 0, int8_t(lr), uint8_t(laddID), chi2Cl};
+      } else {                                        // max number of candidates reached, will overwrite the last one
+        nextLink = ABTrackLink{trc, clID, parentID, MinusOne, 0, int8_t(lr), uint8_t(laddID), chi2Cl};
         return nextID;
       }
     }
@@ -2299,7 +2300,7 @@ int MatchTPCITS::registerABTrackLink(ABSeedHypTree& hyptree, const o2::track::Tr
   } while (nextID > MinusOne);
   // new link is worse than all others, add it only if there is a room to expand
   if (count < mParams->maxABLinksOnLayer) {
-    hyptree.trackLinks.emplace_back(ABTrackLink{trc, clID, parentID, nextID, 0, int8_t(lr), uint8_t(laddID), chi2Cl});
+    hyptree.trackLinks.emplace_back(ABTrackLink{trc, clID, parentID, MinusOne, 0, int8_t(lr), uint8_t(laddID), chi2Cl});
     if (topID > MinusOne) {
       hyptree.trackLinks[topID].nextOnLr = lnkID; // point from previous one
     }
@@ -2385,7 +2386,8 @@ void MatchTPCITS::fillClustersForAfterBurner(int rofStart, int nROFs)
   // sort in chip, Z
   const auto& clusArr = mITSClustersArray;
   LOG(INFO) << " SORT " << idxSort.size() << " clusters for ROF " << rofStart; 
-  sort(idxSort.begin(), idxSort.end(), [clusArr](int i, int j) {
+
+  std::sort(idxSort.begin(), idxSort.end(), [&clusArr](int i, int j) {
     const auto &clI = clusArr[i], &clJ = clusArr[j];
     if (clI.getSensorID() < clJ.getSensorID()) {
       return true;
@@ -2395,6 +2397,7 @@ void MatchTPCITS::fillClustersForAfterBurner(int rofStart, int nROFs)
     }
     return false;
   });
+
   LOG(INFO) << " SORT done " << rofStart; 
   int ncl = idxSort.size();
   int lastSens = -1, nClInSens = 0;
