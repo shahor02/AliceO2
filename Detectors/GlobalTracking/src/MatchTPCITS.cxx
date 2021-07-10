@@ -1809,7 +1809,7 @@ void MatchTPCITS::processABSeed(int sid)
   // prepare matching hypothesis tree for given seed
   auto& seedCont = mTPCABSeeds[sid];
   followABSeed(seedCont.track, MinusTen, NITSLayers-1, seedCont.hypTree); // check matches on outermost layer
-  for (int ilr = NITSLayers; ilr>0; ilr--) {
+  for (int ilr = NITSLayers-1; ilr>0; ilr--) {
     int nextLinkID = seedCont.hypTree.firstInLr[ilr];
     if (nextLinkID < 0) {
       break;
@@ -1820,6 +1820,7 @@ void MatchTPCITS::processABSeed(int sid)
         continue;
       }
       followABSeed(seedLink, nextLinkID, ilr-1, seedCont.hypTree); // check matches on the next layer
+      nextLinkID = seedLink.nextOnLr;
       // RS FIXME account for possibility of missing a layer
     }
   }
@@ -1922,7 +1923,7 @@ int MatchTPCITS::followABSeed(const o2::track::TrackParCov& seed, int seedID, in
       }
     }
   }
-  return hypTree.trackLinks[seedID].nDaughters;
+  return 0; // RS FIXME  //hypTree.trackLinks[seedID].nDaughters;
 }
 /*
 //______________________________________________
@@ -2382,7 +2383,9 @@ void MatchTPCITS::fillClustersForAfterBurner(int rofStart, int nROFs)
     }
   }
   // sort in chip, Z
-  sort(idxSort.begin(), idxSort.end(), [clusArr = mITSClustersArray](int i, int j) {
+  const auto& clusArr = mITSClustersArray;
+  LOG(INFO) << " SORT " << idxSort.size() << " clusters for ROF " << rofStart; 
+  sort(idxSort.begin(), idxSort.end(), [clusArr](int i, int j) {
     const auto &clI = clusArr[i], &clJ = clusArr[j];
     if (clI.getSensorID() < clJ.getSensorID()) {
       return true;
@@ -2392,7 +2395,7 @@ void MatchTPCITS::fillClustersForAfterBurner(int rofStart, int nROFs)
     }
     return false;
   });
-
+  LOG(INFO) << " SORT done " << rofStart; 
   int ncl = idxSort.size();
   int lastSens = -1, nClInSens = 0;
   ClusRange* chipClRefs = nullptr;
