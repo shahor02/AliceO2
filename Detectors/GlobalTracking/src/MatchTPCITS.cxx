@@ -60,6 +60,7 @@ constexpr float MatchTPCITS::XMatchingRef;
 constexpr float MatchTPCITS::YMaxAtXMatchingRef;
 constexpr float MatchTPCITS::Tan70, MatchTPCITS::Cos70I2, MatchTPCITS::MaxSnp, MatchTPCITS::MaxTgp;
 
+/*
 //______________________________________________
 void MatchTPCITS::printABTracksTree(const ABSeedHypTree& llist) const
 {
@@ -237,6 +238,7 @@ void MatchTPCITS::printABClusterUsage() const
     printf("\n");
   }
 }
+*/
 
 //______________________________________________
 MatchTPCITS::MatchTPCITS() = default;
@@ -1629,7 +1631,7 @@ int MatchTPCITS::prepareABSeeds()
   LOGP(INFO, "Created {} seeds from {} TPC tracks and {} interaction candidates in {} s", mTPCABSeeds.size(), mTPCABIndexCache.size(), nIntCand, sw.CpuTime());
   return mTPCABIndexCache.size();
 }
-
+/*
 //______________________________________________
 int MatchTPCITS::prepareTPCTracksAfterBurner() // RS FIXME obsolete
 {
@@ -1666,7 +1668,7 @@ int MatchTPCITS::prepareTPCTracksAfterBurner() // RS FIXME obsolete
 
   return mTPCABIndexCache.size();
 }
-
+*/
 //______________________________________________
 int MatchTPCITS::prepareInteractionTimes()
 {
@@ -1724,44 +1726,7 @@ void MatchTPCITS::runAfterBurner()
     }
   }
 
-
-  int iC = 0;                                // interaction candindate to consider and result of its time-bracket comparison to TPC track
-  int iCClean = iC;                          // id of the next candidate whose cache to be cleaned
-  for (int itr = 0; itr < nTPCCand; itr++) { // TPC track indices are sorted in tMin
-    const auto& tTPC = mTPCWork[mTPCABIndexCache[itr]];
-    // find 1st interaction candidate compatible with time brackets of this track
-    int iCRes;
-    while ((iCRes = tTPC.tBracket.isOutside(mInteractions[iC].tBracket)) < 0 && ++iC < nIntCand) { // interaction precedes the track time-bracket
-      cleanAfterBurnerClusRefCache(iC, iCClean);                                                   // if possible, clean unneeded cached cluster references
-    }
-    if (iCRes == 0) {
-      int iCStart = iC, iCEnd = iC; // check all interaction candidates matching to this TPC track
-      do {
-        if (!mInteractions[iCEnd].clRefPtr) { // if not done yet, fill sorted cluster references for interaction candidate
-          mInteractions[iCEnd].clRefPtr = &mITSChipClustersRefs.emplace_back();
-          fillClustersForAfterBurner(mITSChipClustersRefs.back(), mInteractions[iCEnd].rofITS);
-          // tst
-          int ncl = mITSChipClustersRefs.back().clusterID.size();
-        }
-      } while (++iCEnd < nIntCand && !tTPC.tBracket.isOutside(mInteractions[iCEnd].tBracket));
-
-      auto lbl = mTPCLblWork[mTPCABIndexCache[itr]]; // tmp
-      if (runAfterBurner(mTPCABIndexCache[itr], iCStart, iCEnd)) {
-        lbl.print(); // tmp
-        //tmp
-        if (tTPC.matchID > MinusOne) {
-          printf("AB Matching tree for TPC WID %d and IC %d : %d\n", mTPCABIndexCache[itr], iCStart, iCEnd);
-          auto& llinks = mABSeedHypTree[tTPC.matchID];
-          printABTracksTree(llinks);
-        }
-      }
-    } else if (iCRes > 0) {
-      continue; // TPC track precedes the interaction (means orphan track?), no need to check it
-    } else {
-      LOG(INFO) << "All interaction candidates precede track " << itr << " [" << tTPC.tBracket.getMin() << ":" << tTPC.tBracket.getMax() << "]";
-      break; // all interaction candidates precede TPC track
-    }
-  }
+/*
   buildABCluster2TracksLinks();
   selectBestMatchesAB(); // validate matches which are good in both ways: TPCtrack->ITSclusters and ITSclusters->TPCtrack
 
@@ -1772,6 +1737,7 @@ void MatchTPCITS::runAfterBurner()
     }
   }
   // tmp
+*/
 }
 
 /*
@@ -1856,6 +1822,7 @@ void MatchTPCITS::processABSeed(int sid)
         continue;
       }
       followABSeed(seedLink, nextLinkID, ilr-1, seedCont.hypTree); // check matches on the next layer
+      // RS FIXME account for possibility of missing a layer
     }
   }
 }
@@ -1958,7 +1925,7 @@ int MatchTPCITS::followABSeed(o2::track::TrackParCov& seed, int seedID, int lrID
   }
   return hypTree.trackLinks[seedID].nDaughters;
 }
-
+/*
 //______________________________________________
 bool MatchTPCITS::runAfterBurner(int tpcWID, int iCStart, int iCEnd) // RS FIXME Obsolete
 {
@@ -1984,12 +1951,6 @@ bool MatchTPCITS::runAfterBurner(int tpcWID, int iCStart, int iCEnd) // RS FIXME
       topLink.disable();
       continue;
     }
-    /*
-    // tmp
-    LOG(INFO) << "Check track TPC mtc=" << tTPC.matchID << " int.cand. " << iCC
-              << " [" << tTPC.tBracket.getMin() << ":" << tTPC.tBracket.getMax() << "] for interaction "
-              << " [" << iCCand.tBracket.getMin() << ":" << iCCand.tBracket.getMax() << "]";
-    */
   }
   for (int ilr = NITSLayers; ilr > 0; ilr--) {
     int nextLinkID = abTrackLinksList.firstInLr[ilr];
@@ -2015,7 +1976,7 @@ bool MatchTPCITS::runAfterBurner(int tpcWID, int iCStart, int iCEnd) // RS FIXME
 
   return true;
 }
-
+*/
 //______________________________________________
 void MatchTPCITS::accountForOverlapsAB(int lrSeed)
 {
@@ -2023,6 +1984,7 @@ void MatchTPCITS::accountForOverlapsAB(int lrSeed)
   LOG(WARNING) << "TODO";
 }
 
+/*
 //______________________________________________
 int MatchTPCITS::checkABSeedFromLr(int lrSeed, int seedID, ABSeedHypTree& llist)
 {
@@ -2093,14 +2055,7 @@ int MatchTPCITS::checkABSeedFromLr(int lrSeed, int seedID, ABSeedHypTree& llist)
       if (!clRange.getEntries()) {
         continue;
       }
-      /*
-      // tmp
-      printf("Lr %d #%d/%d LadID: %d (phi:%+d) ChipID: %d [%d Ncl: %d from %d] (rRhi:%d Z:%+d[%+.1f:%+.1f]) | %+.3f %+.3f -> %+.3f %+.3f %+.3f (zErr: %.3f)\n",
-             lrTgt, ilad, ich, ladID, lad.isPhiOutside(phi, errPhi), chipID,
-             chipGID, clRange.getEntries(), clRange.getFirstEntry(),
-             lad.chips[chipID].xyEdges.seenByCircle(trcCircle, errYFrac), lad.chips[chipID].zRange.isOutside(zCross, 3 * errZ), lad.chips[chipID].zRange.getMin(), lad.chips[chipID].zRange.getMax(),
-             xCurr, yCurr, xCross, yCross, zCross, errZ);
-      */
+  
       // track Y error in chip frame
       float errYcalp = errY * (csa * chipC.csAlp + sna * chipC.snAlp); // sigY_rotate(from alpha0 to alpha1) = sigY * cos(alpha1 - alpha0);
       float tolerZ = errZ * mParams->nABSigmaZ, tolerY = errYcalp * nSigmaY;
@@ -2118,10 +2073,6 @@ int MatchTPCITS::checkABSeedFromLr(int lrSeed, int seedID, ABSeedHypTree& llist)
       for (auto clID : chipSelClusters) {
         const auto& cls = mITSClustersArray[clID];
         auto chi2 = trcLC.getPredictedChi2(cls);
-        /*
-        const auto lab = mITSClsLabels->getLabels(clID)[0];                                           // tmp
-        LOG(INFO) << "cl " << cntc++ << " ClLbl:" << lab << " TrcLbl" << lblTrc << " chi2 = " << chi2 << " chipGID: " << lad.chips[chipID].id; // tmp
- */
         if (chi2 > mParams->cutABTrack2ClChi2) {
           continue;
         }
@@ -2146,7 +2097,8 @@ int MatchTPCITS::checkABSeedFromLr(int lrSeed, int seedID, ABSeedHypTree& llist)
   }
   return mABTrackLinks[seedID].nDaughters;
 }
-
+*/
+/*
 //______________________________________________
 void MatchTPCITS::mergeABSeedsOnOverlaps(int ilrPar, ABSeedHypTree& llist)
 {
@@ -2173,6 +2125,7 @@ void MatchTPCITS::mergeABSeedsOnOverlaps(int ilrPar, ABSeedHypTree& llist)
     }
   }
 }
+*/
 
 //______________________________________________
 int MatchTPCITS::findLaddersToCheckBOn(int ilr, int lad0, const o2::math_utils::CircleXYf_t& circle, float errYFrac,
@@ -2245,7 +2198,7 @@ int MatchTPCITS::findLaddersToCheckBOff(int ilr, int lad0, const o2::math_utils:
   }
   return nacc;
 }
-
+/* // RS FIXME Change this
 //______________________________________________
 void MatchTPCITS::buildABCluster2TracksLinks()
 {
@@ -2309,7 +2262,7 @@ void MatchTPCITS::buildABCluster2TracksLinks()
   }
   printABClusterUsage();
 }
-
+*/
 //______________________________________________
 int MatchTPCITS::registerABTrackLink(ABSeedHypTree& hyptree, const o2::track::TrackParCov& trc, int clID, int parentID, int lr, int laddID, float chi2Cl)
 {
@@ -2354,7 +2307,7 @@ int MatchTPCITS::registerABTrackLink(ABSeedHypTree& hyptree, const o2::track::Tr
   }
   return MinusOne; // link to be ignored
 }
-
+/*
 //______________________________________________
 ABSeedHypTree& MatchTPCITS::createABSeedHypTree(int tpcWID)
 {
@@ -2363,7 +2316,7 @@ ABSeedHypTree& MatchTPCITS::createABSeedHypTree(int tpcWID)
   tTPC.matchID = mABSeedHypTree.size(); // register new list in the TPC track
   return mABSeedHypTree.emplace_back(tpcWID);
 }
-
+*/
 //______________________________________________
 float MatchTPCITS::correctTPCTrack(o2::track::TrackParCov& trc, const TrackLocTPC& tTPC, const InteractionCandidate& cand) const
 {
@@ -2461,7 +2414,7 @@ void MatchTPCITS::fillClustersForAfterBurner(int rofStart, int nROFs)
     chipClRefs->setEntries(nClInSens); // finalize last chip reference
   }
 }
-
+/*
 //______________________________________________
 void MatchTPCITS::selectBestMatchesAB()
 {
@@ -2487,7 +2440,8 @@ void MatchTPCITS::selectBestMatchesAB()
     iter++;
   } while (nValidated);
 }
-
+*/
+/*
 //______________________________________________
 bool MatchTPCITS::validateABMatch(int ilink)
 {
@@ -2565,7 +2519,8 @@ bool MatchTPCITS::validateABMatch(int ilink)
   trList.validate();
   return true;
 }
-
+*/
+/*
 //______________________________________________
 void MatchTPCITS::buildBestLinksList(int ilink)
 {
@@ -2650,7 +2605,8 @@ void MatchTPCITS::buildBestLinksList(int ilink)
     }
   }
 }
-
+*/
+/*
 void MatchTPCITS::refitABTrack(int ibest) const
 {
   auto propagator = o2::base::Propagator::Instance();
@@ -2694,6 +2650,7 @@ void MatchTPCITS::refitABTrack(int ibest) const
     ibest = lnk.parentID;
   }
 }
+*/
 
 //______________________________________________
 void MatchTPCITS::setITSROFrameLengthMUS(float fums)
@@ -2848,7 +2805,7 @@ int MatchTPCITS::preselectChipClusters(std::vector<int>& clVecOut, const ClusRan
   }
   return clVecOut.size();
 }
-
+/*
 //______________________________________________
 void MatchTPCITS::cleanAfterBurnerClusRefCache(int currentIC, int& startIC)
 {
@@ -2864,7 +2821,7 @@ void MatchTPCITS::cleanAfterBurnerClusRefCache(int currentIC, int& startIC)
     mITSChipClustersRefs.pop_front();
   }
 }
-
+*/
 //<<============================= AfterBurner for TPC-track / ITS cluster matching ===================<<
 
 #ifdef _ALLOW_DEBUG_TREES_

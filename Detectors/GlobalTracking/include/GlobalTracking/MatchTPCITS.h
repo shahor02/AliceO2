@@ -216,14 +216,15 @@ struct TPCABSeed {
   ABSeedHypTree hypTree{};         ///< matching hypotheses tree for this seed
 };
 
-
+/*
 struct ABOrderLink {          ///< link used for cross-layer sorting of best ABTrackLinks of the ABSeedHypTree
   int trackLinkID = MinusOne; ///< ABTrackLink ID
   int nextLinkID = MinusOne;  ///< indext on the next ABOrderLink
   ABOrderLink() = default;
   ABOrderLink(int id, int nxt = MinusOne) : trackLinkID(id), nextLinkID(nxt) {}
 };
-
+*/
+/*
 //---------------------------------------------------
 struct ABDebugLink : o2::BaseCluster<float> {
 #ifdef _ALLOW_DEBUG_AB_
@@ -267,6 +268,7 @@ struct ABClusterLink {
   bool isDisabled() const { return linkedABTrack == Disabled; }
   void disable() { linkedABTrack = Disabled; }
 };
+*/
 
 struct InteractionCandidate : public o2::InteractionRecord {
   o2::math_utils::Bracketf_t tBracket;                   // interaction time
@@ -322,26 +324,26 @@ class MatchTPCITS
   void run(const o2::globaltracking::RecoContainer& inp);
 
   // RSTODO
-  void runAfterBurner();
-  bool runAfterBurner(int tpcWID, int iCStart, int iCEnd);
-  void buildABCluster2TracksLinks();
-  float correctTPCTrack(o2::track::TrackParCov& trc, const TrackLocTPC& tTPC, const InteractionCandidate& cand) const;
-  int checkABSeedFromLr(int lrSeed, int seedID, ABSeedHypTree& llist);
-  void accountForOverlapsAB(int lrSeed);
-  void mergeABSeedsOnOverlaps(int lr, ABSeedHypTree& llist);
-  ABSeedHypTree& createABSeedHypTree(int tpcWID);
-  ABSeedHypTree& getABSeedHypTree(int tpcWID) { return mABSeedHypTree[mTPCWork[tpcWID].matchID]; }
-  void disableABSeedHypTree(int tpcWID);
-  int registerABTrackLink(ABSeedHypTree& hyptree, const o2::track::TrackParCov& trc, int clID, int parentID, int lr, int laddID, float chi2Cl);
-  void printABTracksTree(const ABSeedHypTree& llist) const;
-  void printABClusterUsage() const;
-  void selectBestMatchesAB();
-  bool validateABMatch(int ilink);
-  void buildBestLinksList(int ilink);
-  bool isBetter(float chi2A, float chi2B) { return chi2A < chi2B; } // RS TODO
-  void dumpABTracksDebugTree(const ABSeedHypTree& llist);
-  void destroyLastABSeedHypTree();
-  void refitABTrack(int ibest) const;
+ 
+//  bool runAfterBurner(int tpcWID, int iCStart, int iCEnd);
+//  void buildABCluster2TracksLinks();
+ 
+//  int checkABSeedFromLr(int lrSeed, int seedID, ABSeedHypTree& llist);
+  
+//  void mergeABSeedsOnOverlaps(int lr, ABSeedHypTree& llist);
+//  ABSeedHypTree& createABSeedHypTree(int tpcWID);
+//  ABSeedHypTree& getABSeedHypTree(int tpcWID) { return mABSeedHypTree[mTPCWork[tpcWID].matchID]; }
+//  void disableABSeedHypTree(int tpcWID);
+  
+//  void printABTracksTree(const ABSeedHypTree& llist) const;
+//  void printABClusterUsage() const;
+//  void selectBestMatchesAB();
+//  bool validateABMatch(int ilink);
+//  void buildBestLinksList(int ilink);
+  
+//  void dumpABTracksDebugTree(const ABSeedHypTree& llist);
+//  void destroyLastABSeedHypTree();
+//  void refitABTrack(int ibest) const;
   void setSkipTPCOnly(bool v) { mSkipTPCOnly = v; }
   void setCosmics(bool v) { mCosmics = v; }
   bool isCosmics() const { return mCosmics; }
@@ -448,7 +450,6 @@ class MatchTPCITS
   int preselectChipClusters(std::vector<int>& clVecOut, const ClusRange& clRange, const ITSChipClustersRefs& clRefs,
                             float trackY, float trackZ, float tolerY, float tolerZ) const;
   void fillClustersForAfterBurner(int rofStart, int nROFs = 1);
-  void cleanAfterBurnerClusRefCache(int currentIC, int& startIC);
   void flagUsedITSClusters(const o2::its::TrackITS& track, int rofOffset);
 
   void doMatching(int sec);
@@ -527,10 +528,15 @@ class MatchTPCITS
   }
 
   // ========================= AFTERBURNER =========================
+  void runAfterBurner();
   int prepareABSeeds();
   void processABSeed(int sid);
   void followABSeed(o2::track::TrackParCov& tr, int trID, int lrID, ABSeedHypTree& hypTree);
+  int registerABTrackLink(ABSeedHypTree& hyptree, const o2::track::TrackParCov& trc, int clID, int parentID, int lr, int laddID, float chi2Cl);
+  bool isBetter(float chi2A, float chi2B) { return chi2A < chi2B; } // RS FIMXE TODO 
 
+  void accountForOverlapsAB(int lrSeed);
+  float correctTPCTrack(o2::track::TrackParCov& trc, const TrackLocTPC& tTPC, const InteractionCandidate& cand) const; // RS FIXME will be needed for refit
   //================================================================
 
   bool mInitDone = false;  ///< flag init already done
