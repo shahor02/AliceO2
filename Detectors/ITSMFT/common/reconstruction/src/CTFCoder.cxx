@@ -97,6 +97,7 @@ void CTFCoder::compress(CompressedClusters& cc,
       cc.chipMul.push_back(0);
       cc.chipInc.push_back(0);
     }
+    //    LOG(INFO) << "RS NEW ROF " << rofRec.getBCData() << " " << rofRec.getNEntries() << " / " << rofRec.getFirstEntry() << " 1st chip = " << prevChip;
     for (; icl < iclMax; icl++) { // clusters within a chip are stored in increasing column number
       const auto& cl = cclusVec[icl];
       cc.row[icl] = cl.getRow(); // row is practically random, store it as it is
@@ -110,9 +111,11 @@ void CTFCoder::compress(CompressedClusters& cc,
         // cc.chipInc[icl] = cl.getChipID() - prevChip;  // this is the version with chipInc stored for every pixel
         cc.chipInc.push_back(cl.getChipID() - prevChip); // this is the version with chipInc stored once per new chip
         cc.chipMul.push_back(1);                         // this is the version with chipInc stored once per new chip
+	//	LOG(INFO) << "RS chip increment from " << prevChip << " by " << cc.chipInc.back();
         prevCol = cc.colInc[icl] = cl.getCol();
-        prevChip = cl.getChipID();
+        prevChip = cl.getChipID();	
       }
+      //      LOG(INFO) << "RS Chip " << prevChip << " col = " << cl.getCol() << " row = " << cl.getRow() << " patt=" << cl.getPatternID();
     }
   }
   cc.header.nChips = cc.chipMul.size();

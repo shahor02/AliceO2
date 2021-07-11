@@ -102,13 +102,25 @@ void CTFCoder::encode(VEC& buff, const gsl::span<const ROFRecord>& rofRecVec, co
   ENCODEITSMFT(cc.bcIncROF, CTF::BLCbcIncROF, 0);
   ENCODEITSMFT(cc.orbitIncROF, CTF::BLCorbitIncROF, 0);
   ENCODEITSMFT(cc.nclusROF, CTF::BLCnclusROF, 0);
+  for (size_t i=0;i<cc.firstChipROF.size();i++) {
+    LOG(INFO) << "RSD ROFdata: " << i << " " << (int)cc.firstChipROF[i] << " " << (int)cc.bcIncROF[i] << " " << (int)cc.orbitIncROF[i] << " " << (int)cc.nclusROF[i];
+  }
   //
   ENCODEITSMFT(cc.chipInc, CTF::BLCchipInc, 0);
   ENCODEITSMFT(cc.chipMul, CTF::BLCchipMul, 0);
+  for (size_t i=0;i<cc.chipInc.size();i++) {
+    LOG(INFO) << "RSD Chipdata: " << i << " "  << (int)cc.chipInc[i] << " " << (int)cc.chipMul[i];
+  }  
   ENCODEITSMFT(cc.row, CTF::BLCrow, 0);
   ENCODEITSMFT(cc.colInc, CTF::BLCcolInc, 0);
   ENCODEITSMFT(cc.pattID, CTF::BLCpattID, 0);
   ENCODEITSMFT(cc.pattMap, CTF::BLCpattMap, 0);
+  for (size_t i=0;i<cc.row.size();i++) {
+    LOG(INFO) << "RSD Hitdata: " << i << " "  << (int)cc.row[i] << " " << (int)cc.colInc[i] << " " << (int)cc.pattID[i];
+  }
+  for (size_t i=0;i<cc.pattMap.size();i++) {
+    LOG(INFO) << "RSD Pattdata: "  << i << " " << " " << (int)cc.pattMap[i];
+  }
   // clang-format on
   CTF::get(buff.data())->print(getPrefix());
 }
@@ -126,15 +138,27 @@ void CTFCoder::decode(const CTF::base& ec, VROF& rofRecVec, VCLUS& cclusVec, VPA
   DECODEITSMFT(cc.bcIncROF,     CTF::BLCbcIncROF);
   DECODEITSMFT(cc.orbitIncROF,  CTF::BLCorbitIncROF);
   DECODEITSMFT(cc.nclusROF,     CTF::BLCnclusROF);
+  for (size_t i=0;i<cc.firstChipROF.size();i++) {
+    LOG(INFO) << "RSD ROFdata: " << i << " "  << (int)cc.firstChipROF[i] << " " << (int)cc.bcIncROF[i] << " " << (int)cc.orbitIncROF[i] << " " << (int)cc.nclusROF[i];
+  }
   //    
   DECODEITSMFT(cc.chipInc,      CTF::BLCchipInc);
   DECODEITSMFT(cc.chipMul,      CTF::BLCchipMul);
+  for (size_t i=0;i<cc.chipInc.size();i++) {
+    LOG(INFO) << "RSD Chipdata: " << i << " "  << (int)cc.chipInc[i] << " " << (int)cc.chipMul[i];
+  }
   DECODEITSMFT(cc.row,          CTF::BLCrow);
   DECODEITSMFT(cc.colInc,       CTF::BLCcolInc);
   DECODEITSMFT(cc.pattID,       CTF::BLCpattID);
   DECODEITSMFT(cc.pattMap,      CTF::BLCpattMap);
+  for (size_t i=0;i<cc.row.size();i++) {
+    LOG(INFO) << "RSD Hitdata: " << i << " "  << (int)cc.row[i] << " " << (int)cc.colInc[i] << " " << (int)cc.pattID[i];
+  }
+  for (size_t i=0;i<cc.pattMap.size();i++) {
+    LOG(INFO) << "RSD Pattdata: "  << i << " " << " " << (int)cc.pattMap[i];
+  } 
   // clang-format on
-  //
+  // 
   decompress(cc, rofRecVec, cclusVec, pattVec);
 }
 
@@ -165,6 +189,7 @@ void CTFCoder::decompress(const CompressedClusters& cc, VROF& rofRecVec, VCLUS& 
     // resrore chips data
     auto prevChip = cc.firstChipROF[irof];
     uint16_t prevCol = 0, prevRow = 0;
+    //    LOG(INFO) << "RS NEW ROF " << rofRec.getBCData() << " " << rofRec.getNEntries() << " / " << rofRec.getFirstEntry() << " 1st chip = " << prevChip;
 
     // >> this is the version with chipInc stored once per new chip
     int inChip = 0;
@@ -173,6 +198,7 @@ void CTFCoder::decompress(const CompressedClusters& cc, VROF& rofRecVec, VCLUS& 
       if (inChip++ < cc.chipMul[chipCount]) { // still the same chip
         clus.setCol((prevCol += cc.colInc[clCount]));
       } else { // new chip starts
+	//	LOG(INFO) << "RS chip increment from " << prevChip << " by " << cc.chipInc[1+chipCount];
         prevChip += cc.chipInc[++chipCount];
         inChip = 1;
         clus.setCol((prevCol = cc.colInc[clCount])); // colInc has abs. col meaning
@@ -180,6 +206,7 @@ void CTFCoder::decompress(const CompressedClusters& cc, VROF& rofRecVec, VCLUS& 
       clus.setChipID(prevChip);
       clus.setRow(cc.row[clCount]);
       clus.setPatternID(cc.pattID[clCount]);
+      //      LOG(INFO) << "RS Chip " << prevChip << " col = " << clus.getCol() << " row = " << clus.getRow() << " patt=" << clus.getPatternID() << (prevChip >= 24120 ? " BAD" : "");
       clCount++;
     }
     if (cc.nclusROF[irof]) {
