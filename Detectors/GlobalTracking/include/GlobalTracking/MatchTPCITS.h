@@ -179,13 +179,18 @@ struct ABTrackLink : public o2::track::TrackParCov {
   int nextOnLr = MinusOne; ///< ID of the next (in quality) link on the same layer
   uint8_t nDaughters = 0;  ///< number of daughter links on lower layers
   int8_t layerID = -1;     ///< layer ID
+  int8_t nContLayers = 0;  ///< number of contributing layers
   uint8_t ladderID = 0xff; ///< ladder ID in the layer (used for seeds with 2 hits in the layer)
   float chi2 = 0.f;        ///< chi2 after update
+
+  ABTrackLink(const o2::track::TrackParCov& tr, int cl, int parID, int nextID, int lr, int nc, int ld, float _chi2) 
+  : o2::track::TrackParCov(tr), clID(cl), parentID(parID), nextOnLr(nextID), layerID(int8_t(lr)), nContLayers(int8_t(nc)), ladderID(uint8_t(ld)), chi2(_chi2) {}
+
   bool isDisabled() const { return clID == Disabled; }
   void disable() { clID = Disabled; }
   bool isDummyTop() const { return clID == MinusTen; }
   float chi2Norm() const { return layerID < o2::its::RecoGeomHelper::getNLayers() ? chi2 / (o2::its::RecoGeomHelper::getNLayers() - layerID) : 999.; }
-  float chi2NormPredict(float chi2cl) const { return (chi2 + chi2cl) / (1 + o2::its::RecoGeomHelper::getNLayers() - layerID); }
+  float chi2NormPredict(float chi2cl) const { return (chi2 + chi2cl) / (1 + o2::its::RecoGeomHelper::getNLayers() - layerID); }  
 };
 
 struct ABSeedHypTree {
@@ -206,6 +211,9 @@ struct ABSeedHypTree {
   void disable() { status = MinusTen; }
   bool isValidated() const { return status == Validated; }
   void validate() { status = Validated; }
+  ABTrackLink* getBest() {
+    return lowestLayer < o2::its::RecoGeomHelper::getNLayers() ? &trackLinks[firstInLr[lowestLayer]] : nullptr;
+  }
 };
 
 // AB primary seed: TPC track propagated to outermost ITS layer under specific InteractionCandidate hypothesis

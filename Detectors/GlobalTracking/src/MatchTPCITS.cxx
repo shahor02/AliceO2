@@ -1725,6 +1725,8 @@ void MatchTPCITS::runAfterBurner()
     }
   }
 
+
+
 /*
   buildABCluster2TracksLinks();
   selectBestMatchesAB(); // validate matches which are good in both ways: TPCtrack->ITSclusters and ITSclusters->TPCtrack
@@ -1824,8 +1826,15 @@ void MatchTPCITS::processABSeed(int sid)
       // RS FIXME account for possibility of missing a layer
     }
   }
-  LOG(INFO) << "seed " << sid << " last lr: " << int(seedCont.hypTree.lowestLayer);
+  const auto* bestL = seedCont.hypTree.getBest();
+  if (bestL) {
+    LOG(INFO) << "seed " << sid << " last lr: " << int(seedCont.hypTree.lowestLayer) << " Ncont: " << int(bestL->nContLayers) << " chi2 " << bestL->chi2;
+  }
+  else {
+    LOG(INFO) << "seed " << sid << " : NONE";
+  }
 }
+
 
 //______________________________________________
 int MatchTPCITS::followABSeed(const o2::track::TrackParCov& seed, int seedID, int lrID, ABSeedHypTree& hypTree)
@@ -1914,8 +1923,7 @@ int MatchTPCITS::followABSeed(const o2::track::TrackParCov& seed, int seedID, in
           auto& link = hypTree.trackLinks[lnkID];
           link.update(cls);
           if (seedID>=MinusOne) {
-            link.chi2 = hypTree.trackLinks[seedID].chi2;
-            hypTree.trackLinks[seedID].nDaughters++;
+            hypTree.trackLinks[seedID].nDaughters++; // RS FIXME : do we need this?
           }
           if (lrID < hypTree.lowestLayer) {
             hypTree.lowestLayer = lrID; // update lowest layer reached
@@ -2269,21 +2277,25 @@ int MatchTPCITS::registerABTrackLink(ABSeedHypTree& hyptree, const o2::track::Tr
 {
   // registers new ABLink on the layer, assigning provided kinematics. The link will be registered in a
   // way preserving the quality ordering of the links on the layer
-  int lnkID = hyptree.trackLinks.size();
+  int lnkID = hyptree.trackLinks.size(), nextID = hyptree.firstInLr[lr], nc = 1 + (parentID>MinusOne ? hyptree.trackLinks[parentID].nContLayers : 0);
+  float chi2 = chi2Cl + (parentID>MinusOne ? hyptree.trackLinks[parentID].chi2 : 0.);
+  LOG(INFO) << "Reg on lr "  << lr << " nc = " << nc << " chi2cl=" << chi2Cl << " -> " << chi2;
+
   if (hyptree.firstInLr[lr] == MinusOne) { // no links on this layer yet
     hyptree.firstInLr[lr] = lnkID;
-    hyptree.trackLinks.emplace_back(ABTrackLink{trc, clID, parentID, MinusOne, 0, int8_t(lr), uint8_t(laddID), chi2Cl});
+    hyptree.trackLinks.emplace_back(trc, clID, parentID, MinusOne, lr, nc, laddID, chi2);
     return lnkID;
   }
   // add new link sorting links of this layer in quality
 
-  int count = 0, nextID = hyptree.firstInLr[lr], topID = MinusOne;
+  int count = 0, topID = MinusOne;
   do {
     auto& nextLink = hyptree.trackLinks[nextID];
     count++;
-    if (parentID<=MinusOne || isBetter(hyptree.trackLinks[parentID].chi2NormPredict(chi2Cl), nextLink.chi2Norm())) { // need to insert new link before nextLink
+    bool newIsBetter = parentID<=MinusOne ? isBetter(chi2, nextLink.chi2) : isBetter(hyptree.trackLinks[parentID].chi2NormPredict(chi2Cl), nextLink.chi2Norm());
+    if (newIsBetter) { // need to insert new link before nextLink
       if (count < mParams->maxABLinksOnLayer) {                                                // will insert in front of nextID
-        auto& newLnk = hyptree.trackLinks.emplace_back(ABTrackLink{trc, clID, parentID, nextID, 0, int8_t(lr), uint8_t(laddID), chi2Cl});
+        hyptree.trackLinks.emplace_back(trc, clID, parentID, nextID, lr, nc, laddID, chi2);
         if (topID == MinusOne) {         // are we comparing new link with best link on the layer?
           hyptree.firstInLr[lr] = lnkID; // flag as best on the layer
         } else {
@@ -2291,7 +2303,7 @@ int MatchTPCITS::registerABTrackLink(ABSeedHypTree& hyptree, const o2::track::Tr
         }
         return lnkID;
       } else {                                        // max number of candidates reached, will overwrite the last one
-        nextLink = ABTrackLink{trc, clID, parentID, MinusOne, 0, int8_t(lr), uint8_t(laddID), chi2Cl};
+        nextLink = ABTrackLink(trc, clID, parentID, MinusOne, lr, nc, laddID, chi2);
         return nextID;
       }
     }
@@ -2300,7 +2312,7 @@ int MatchTPCITS::registerABTrackLink(ABSeedHypTree& hyptree, const o2::track::Tr
   } while (nextID > MinusOne);
   // new link is worse than all others, add it only if there is a room to expand
   if (count < mParams->maxABLinksOnLayer) {
-    hyptree.trackLinks.emplace_back(ABTrackLink{trc, clID, parentID, MinusOne, 0, int8_t(lr), uint8_t(laddID), chi2Cl});
+    hyptree.trackLinks.emplace_back(trc, clID, parentID, MinusOne, lr, nc, laddID, chi2);
     if (topID > MinusOne) {
       hyptree.trackLinks[topID].nextOnLr = lnkID; // point from previous one
     }
