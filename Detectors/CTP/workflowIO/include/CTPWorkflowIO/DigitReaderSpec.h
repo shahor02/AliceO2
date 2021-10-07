@@ -14,7 +14,6 @@
 
 #include "Framework/DataProcessorSpec.h"
 
-
 namespace o2
 {
 

@@ -11,7 +11,6 @@
 
 #include "CTPWorkflowIO/DigitReaderSpec.h"
 
-
 #include "TFile.h"
 #include "TTree.h"
 #include "DataFormatsCTP/Digits.h"
@@ -25,7 +24,6 @@
 #include "Framework/Logger.h"
 #include <vector>
 
-
 using namespace o2::framework;
 
 namespace o2
@@ -33,7 +31,8 @@ namespace o2
 namespace ctp
 {
 
-class DigitReader : public Task {
+class DigitReader : public Task
+{
  public:
   DigitReader() = delete;
   DigitReader(bool useMC);
@@ -48,7 +47,7 @@ class DigitReader : public Task {
   std::unique_ptr<TFile> mFile;
   std::unique_ptr<TTree> mTree;
 
-  bool mUseMC = false;    // use MC truth
+  bool mUseMC = false; // use MC truth
   std::string mDigTreeName = "o2sim";
   std::string mDigitBranchName = "CTPDigits";
 };
@@ -59,11 +58,11 @@ DigitReader::DigitReader(bool useMC)
     LOG(INFO) << "CTP does not support MC truth at the moment";
   }
 }
-  
+
 void DigitReader::init(InitContext& ic)
 {
   auto filename = o2::utils::Str::concat_string(o2::utils::Str::rectifyDirectory(ic.options().get<std::string>("input-dir")),
-                                            ic.options().get<std::string>("ctp-digit-infile"));
+                                                ic.options().get<std::string>("ctp-digit-infile"));
   connectTree(filename);
 }
 
