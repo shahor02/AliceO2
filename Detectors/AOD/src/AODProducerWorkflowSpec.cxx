@@ -1315,10 +1315,6 @@ DataProcessorSpec getAODProducerWorkflowSpec(GID::mask_t src, bool useMC)
   dataRequest->requestTracks(src, useMC);
   dataRequest->requestPrimaryVertertices(useMC);
   dataRequest->requestSecondaryVertertices(useMC);
-  dataRequest->requestFT0RecPoints(false);
-  dataRequest->requestFV0RecPoints(false);
-  dataRequest->requestFDDRecPoints(false);
-  dataRequest->requestClusters(GIndex::getSourcesMask("TPC,TOF"), false);
 
   outputs.emplace_back(OutputLabel{"O2bc"}, "AOD", "BC", 0, Lifetime::Timeframe);
   outputs.emplace_back(OutputLabel{"O2cascade"}, "AOD", "CASCADE", 0, Lifetime::Timeframe);
