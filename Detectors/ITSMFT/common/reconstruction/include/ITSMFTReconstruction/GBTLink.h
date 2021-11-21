@@ -267,7 +267,7 @@ GBTLink::CollectedDataStatus GBTLink::collectROFCableData(const Mapping& chmap)
           printCalibrationWord(gbtC);
         }
         dataOffset += GBTPaddedWordLength;
-        LOGP(DEBUG, "SetCalibData for RU:{} at bc:{}/orb:{} : [{}/{}]", ruPtr->ruSWID,  gbtTrg->bc, gbtTrg->orbit, gbtC->calibCounter, gbtC->calibUserField);
+        LOGP(DEBUG, "SetCalibData for RU:{} at bc:{}/orb:{} : [{}/{}]", ruPtr->ruSWID, gbtTrg->bc, gbtTrg->orbit, gbtC->calibCounter, gbtC->calibUserField);
         ruPtr->calibData = {gbtC->calibCounter, gbtC->calibUserField};
       }
     }
