@@ -45,7 +45,8 @@ BOOST_AUTO_TEST_CASE(CTFTest)
       cells.emplace_back(tower, en, timeCell, (ChannelType_t)stat);
       tower += 1 + gRandom->Integer(100);
     }
-    triggers.emplace_back(ir, start, cells.size() - start);
+    uint32_t trigBits = gRandom->Integer(0xffff); // we store only 16 bits
+    triggers.emplace_back(ir, trigBits, start, cells.size() - start);
   }
 
   sw.Start();
@@ -55,7 +56,7 @@ BOOST_AUTO_TEST_CASE(CTFTest)
     coder.encode(vec, triggers, cells); // compress
   }
   sw.Stop();
-  LOG(INFO) << "Compressed in " << sw.CpuTime() << " s";
+  LOG(info) << "Compressed in " << sw.CpuTime() << " s";
 
   // writing
   {
@@ -67,7 +68,7 @@ BOOST_AUTO_TEST_CASE(CTFTest)
     ctfImage->appendToTree(ctfTree, "EMC");
     ctfTree.Write();
     sw.Stop();
-    LOG(INFO) << "Wrote to tree in " << sw.CpuTime() << " s";
+    LOG(info) << "Wrote to tree in " << sw.CpuTime() << " s";
   }
 
   // reading
@@ -79,7 +80,7 @@ BOOST_AUTO_TEST_CASE(CTFTest)
     BOOST_CHECK(tree);
     o2::emcal::CTF::readFromTree(vec, *(tree.get()), "EMC");
     sw.Stop();
-    LOG(INFO) << "Read back from tree in " << sw.CpuTime() << " s";
+    LOG(info) << "Read back from tree in " << sw.CpuTime() << " s";
   }
 
   std::vector<TriggerRecord> triggersD;
@@ -92,22 +93,23 @@ BOOST_AUTO_TEST_CASE(CTFTest)
     coder.decode(ctfImage, triggersD, cellsD); // decompress
   }
   sw.Stop();
-  LOG(INFO) << "Decompressed in " << sw.CpuTime() << " s";
+  LOG(info) << "Decompressed in " << sw.CpuTime() << " s";
 
   BOOST_CHECK(triggersD.size() == triggers.size());
   BOOST_CHECK(cellsD.size() == cells.size());
-  LOG(INFO) << " BOOST_CHECK triggersD.size() " << triggersD.size() << " triggers.size() " << triggers.size()
+  LOG(info) << " BOOST_CHECK triggersD.size() " << triggersD.size() << " triggers.size() " << triggers.size()
             << " BOOST_CHECK(cellsD.size() " << cellsD.size() << " cells.size()) " << cells.size();
 
   for (size_t i = 0; i < triggers.size(); i++) {
     const auto& dor = triggers[i];
     const auto& ddc = triggersD[i];
-    LOG(DEBUG) << " Orig.TriggerRecord " << i << " " << dor.getBCData() << " " << dor.getFirstEntry() << " " << dor.getNumberOfObjects();
-    LOG(DEBUG) << " Deco.TriggerRecord " << i << " " << ddc.getBCData() << " " << ddc.getFirstEntry() << " " << ddc.getNumberOfObjects();
+    LOG(debug) << " Orig.TriggerRecord " << i << " " << dor.getBCData() << " " << dor.getFirstEntry() << " " << dor.getNumberOfObjects();
+    LOG(debug) << " Deco.TriggerRecord " << i << " " << ddc.getBCData() << " " << ddc.getFirstEntry() << " " << ddc.getNumberOfObjects();
 
     BOOST_CHECK(dor.getBCData() == ddc.getBCData());
     BOOST_CHECK(dor.getNumberOfObjects() == ddc.getNumberOfObjects());
-    BOOST_CHECK(dor.getFirstEntry() == dor.getFirstEntry());
+    BOOST_CHECK(dor.getFirstEntry() == ddc.getFirstEntry());
+    BOOST_CHECK(dor.getTriggerBits() == ddc.getTriggerBits());
   }
 
   for (size_t i = 0; i < cells.size(); i++) {
