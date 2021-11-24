@@ -156,8 +156,8 @@ void CTFCoder::decode(const CTF::base& ec, VTRG& trigVec, VCELL& cellVec)
       cellVec.emplace_back(cell);
       cellCount++;
     }
-    uint32_t trigBits = trigger[itrig];
-    trigVec.emplace_back(ir, trigBits, firstEntry, entries[itrig]);
+    auto currenttrigger = trigVec.emplace_back(ir, firstEntry, entries[itrig]);
+    currenttrigger.setTriggerBitsCompressed(trigger[itrig]);
   }
   assert(cellCount == header.nCells);
 }
