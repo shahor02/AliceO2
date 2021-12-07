@@ -38,10 +38,11 @@ struct SVertexerParams : public o2::conf::ConfigurableParamHelper<SVertexerParam
   float maxRIni = 150;          ///< don't consider as a seed (circles intersection) if its R exceeds this
   //
   // propagation options
-  o2::base::Propagator::MatCorrType matCorr = o2::base::Propagator::MatCorrType::USEMatCorrLUT; // material correction to use
+  int matCorr = int(o2::base::Propagator::MatCorrType::USEMatCorrLUT);                          ///< material correction to use
   float minRFor3DField = 40;                                                                    ///< above this radius use 3D field
   float maxStep = 2.;                                                                           ///< max step size when external propagator is used
   float maxSnp = 0.95;                                                                          ///< max snp when external propagator is used
+  float minXSeed = -1.;                                                                         ///< minimal X of seed in prong frame (within the radial resolution track should not go to negative X)
   bool usePropagator = true;                                                                    ///< use external propagator
   bool refitWithMatCorr = true;                                                                 ///< refit V0 applying material corrections
   //
