@@ -240,7 +240,7 @@ AlgorithmSpec CCDBHelpers::fetchFromCCDB()
         // Fetch the rest of the objects.
         LOGP(info, "Fetching objects. Run: {}. OrbitResetTime: {}, Creation: {}, Timestamp: {}, firstTFOrbit: {}",
              dtc.runNumber, orbitResetTime, timingInfo.creation, timestamp, timingInfo.firstTFOrbit);
-	// For Giulio: the dtc.orbitResetTime is wrong, it is assigned from the dph->creation, why?
+        // For Giulio: the dtc.orbitResetTime is wrong, it is assigned from the dph->creation, why?
         std::string ccdbMetadataPrefix = "ccdb-metadata-";
 
         for (auto& route : helper->routes) {
