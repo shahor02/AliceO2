@@ -38,7 +38,7 @@ using DPVAL = o2::dcs::DataPointValue;
 using DPCOM = o2::dcs::DataPointCompositeObject;
 
 inline llu2lu(std::uint64_t v) { return (unsigned long)v; }
-  
+
 struct GRPEnvVariables {
 
   std::pair<uint64_t, double> mCavernTemperature;
