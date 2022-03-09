@@ -391,8 +391,8 @@ void Digitizer::processHit(const o2::itsmft::Hit& hit, uint32_t& maxFr, int evID
         continue;
       }
       uint16_t colIS = icol + colS;
-      if (mNoiseMap && mNoiseMap->isNoisy(chipID, rowIS,colIS)) {
-	continue;
+      if (mNoiseMap && mNoiseMap->isNoisy(chipID, rowIS, colIS)) {
+        continue;
       }
       //
       registerDigits(chip, roFrameAbs, timeInROF, nFrames, rowIS, colIS, nEle, lbl);
