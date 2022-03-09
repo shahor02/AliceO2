@@ -37,9 +37,13 @@ class ClustererDPL : public Task
   void run(ProcessingContext& pc) final;
 
  private:
+  void updateTimeDependentParams(ProcessingContext& pc);
+  void finaliseCCDB(ConcreteDataMatcher& matcher, void* obj);
+
   int mState = 0;
   bool mUseMC = true;
   bool mPatterns = true;
+  bool mUseClusterDictionary = true;
   int mNThreads = 1;
   std::unique_ptr<std::ifstream> mFile = nullptr;
   std::unique_ptr<o2::itsmft::Clusterer> mClusterer = nullptr;
