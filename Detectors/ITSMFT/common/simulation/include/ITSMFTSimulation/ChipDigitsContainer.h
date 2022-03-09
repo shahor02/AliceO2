@@ -20,6 +20,7 @@
 #include "SimulationDataFormat/MCCompLabel.h"
 #include "ITSMFTBase/SegmentationAlpide.h"
 #include "ITSMFTSimulation/PreDigit.h"
+#include "DataFormatsITSMFT/NoiseMap.h"
 #include <map>
 #include <vector>
 
@@ -43,7 +44,7 @@ class ChipDigitsContainer
 
   std::map<ULong64_t, o2::itsmft::PreDigit>& getPreDigits() { return mDigits; }
   bool isEmpty() const { return mDigits.empty(); }
-
+  void setNoiseMap(const o2::itsmft::NoiseMap* mp) { mNoiseMap = mp; }
   void setChipIndex(UShort_t ind) { mChipIndex = ind; }
   UShort_t getChipIndex() const { return mChipIndex; }
 
@@ -69,6 +70,7 @@ class ChipDigitsContainer
  protected:
   UShort_t mChipIndex = 0;                           ///< chip index
   bool mDisabled = false;
+  const o2::itsmft::NoiseMap* mNoiseMap = nullptr;
   std::map<ULong64_t, o2::itsmft::PreDigit> mDigits; ///< Map of fired pixels, possibly in multiple frames
 
   ClassDefNV(ChipDigitsContainer, 1);
