@@ -42,18 +42,20 @@ class EntropyDecoderSpec : public o2::framework::Task
 
  private:
   void updateTimeDependentParams(o2::framework::ProcessingContext& pc);
+  void finaliseCCDB(o2::framework::ConcreteDataMatcher& matcher, void* obj) final;
 
   static constexpr std::string_view ITSDeviceName = "its-entropy-decoder";
   static constexpr std::string_view MFTDeviceName = "mft-entropy-decoder";
   o2::header::DataOrigin mOrigin = o2::header::gDataOriginInvalid;
   o2::itsmft::CTFCoder mCTFCoder;
-  std::unique_ptr<NoiseMap> mNoiseMap;
+  const NoiseMap* mNoiseMap = nullptr;
   LookUp mPattIdConverter;
   bool mGetDigits{false};
   bool mMaskNoise{false};
+  bool mUseClusterDictionary{true};
+
   std::string mCTFDictPath{};
   std::string mClusDictPath{};
-  std::string mNoiseFilePath{};
   TStopwatch mTimer;
 };
 
