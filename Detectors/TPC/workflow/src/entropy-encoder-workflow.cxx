@@ -21,8 +21,9 @@ using namespace o2::framework;
 void customize(std::vector<o2::framework::ConfigParamSpec>& workflowOptions)
 {
   // option allowing to set parameters
-  std::vector<ConfigParamSpec> options{ConfigParamSpec{"configKeyValues", VariantType::String, "", {"Semicolon separated key=value strings"}},
-           ConfigParamSpec{"inputFromFile", VariantType::Bool, false, {"Expect COMPCLUSTERS from file"}},
+  std::vector<ConfigParamSpec> options{
+    ConfigParamSpec{"configKeyValues", VariantType::String, "", {"Semicolon separated key=value strings"}},
+    ConfigParamSpec{"inputFromFile", VariantType::Bool, false, {"Expect COMPCLUSTERS from file"}},
   };
 
   std::swap(workflowOptions, options);
