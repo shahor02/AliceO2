@@ -242,7 +242,8 @@ class GRPDCSDPsProcessor
   uint64_t processFlags(uint64_t flag, const char* pid) { return 0; } // for now it is not really implemented
   bool processCollimators(const DPCOM& dpcom);
   bool processEnvVar(const DPCOM& dpcom);
-  bool processPair(const DPCOM& dpcom, const std::string& alias, std::pair<uint64_t, double>& p, bool& flag);
+  bool processPairD(const DPCOM& dpcom, const std::string& alias, std::pair<uint64_t, double>& p, bool& flag);
+  bool processPairS(const DPCOM& dpcom, const std::string& alias, std::pair<uint64_t, std::string>& p, bool& flag);
   bool compareAndUpdate(std::pair<uint64_t, double>& p, const DPCOM& dpcom);
   bool processLHCIFDPs(const DPCOM& dpcom);
 

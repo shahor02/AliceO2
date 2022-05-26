@@ -142,12 +142,12 @@ bool GRPDCSDPsProcessor::processCollimators(const DPCOM& dpcom)
 {
 
   // function to process Data Points that are related to the collimators
-  bool match = processPair(dpcom, "LHC_CollimatorPos_TCLIA_4R2_lvdt_gap_downstream", mCollimators.mgap_downstream, mUpdateCollimators) ||
-               processPair(dpcom, "LHC_CollimatorPos_TCLIA_4R2_lvdt_gap_upstream", mCollimators.mgap_upstream, mUpdateCollimators) ||
-               processPair(dpcom, "LHC_CollimatorPos_TCLIA_4R2_lvdt_left_downstream", mCollimators.mleft_downstream, mUpdateCollimators) ||
-               processPair(dpcom, "LHC_CollimatorPos_TCLIA_4R2_lvdt_left_upstream", mCollimators.mleft_upstream, mUpdateCollimators) ||
-               processPair(dpcom, "LHC_CollimatorPos_TCLIA_4R2_lvdt_right_downstream", mCollimators.mright_downstream, mUpdateCollimators) ||
-               processPair(dpcom, "LHC_CollimatorPos_TCLIA_4R2_lvdt_right_upstream", mCollimators.mright_upstream, mUpdateCollimators);
+  bool match = processPairD(dpcom, "LHC_CollimatorPos_TCLIA_4R2_lvdt_gap_downstream", mCollimators.mgap_downstream, mUpdateCollimators) ||
+               processPairD(dpcom, "LHC_CollimatorPos_TCLIA_4R2_lvdt_gap_upstream", mCollimators.mgap_upstream, mUpdateCollimators) ||
+               processPairD(dpcom, "LHC_CollimatorPos_TCLIA_4R2_lvdt_left_downstream", mCollimators.mleft_downstream, mUpdateCollimators) ||
+               processPairD(dpcom, "LHC_CollimatorPos_TCLIA_4R2_lvdt_left_upstream", mCollimators.mleft_upstream, mUpdateCollimators) ||
+               processPairD(dpcom, "LHC_CollimatorPos_TCLIA_4R2_lvdt_right_downstream", mCollimators.mright_downstream, mUpdateCollimators) ||
+               processPairD(dpcom, "LHC_CollimatorPos_TCLIA_4R2_lvdt_right_upstream", mCollimators.mright_upstream, mUpdateCollimators);
   if (mVerbose) {
     LOG(info) << "update collimators = " << mUpdateCollimators << " matched: " << match;
   }
@@ -160,10 +160,10 @@ bool GRPDCSDPsProcessor::processEnvVar(const DPCOM& dpcom)
 {
 
   // function to process Data Points that are related to env variables
-  bool match = processPair(dpcom, "CavernTemperature", mEnvVars.mCavernTemperature, mUpdateEnvVars) ||
-               processPair(dpcom, "CavernAtmosPressure", mEnvVars.mCavernAtmosPressure, mUpdateEnvVars) ||
-               processPair(dpcom, "SurfaceAtmosPressure", mEnvVars.mSurfaceAtmosPressure, mUpdateEnvVars) ||
-               processPair(dpcom, "CavernAtmosPressure2", mEnvVars.mCavernAtmosPressure2, mUpdateEnvVars);
+  bool match = processPairD(dpcom, "CavernTemperature", mEnvVars.mCavernTemperature, mUpdateEnvVars) ||
+               processPairD(dpcom, "CavernAtmosPressure", mEnvVars.mCavernAtmosPressure, mUpdateEnvVars) ||
+               processPairD(dpcom, "SurfaceAtmosPressure", mEnvVars.mSurfaceAtmosPressure, mUpdateEnvVars) ||
+               processPairD(dpcom, "CavernAtmosPressure2", mEnvVars.mCavernAtmosPressure2, mUpdateEnvVars);
   if (mVerbose) {
     LOG(info) << "update env vars = " << mUpdateEnvVars << " matched: " << match;
   }
@@ -171,8 +171,7 @@ bool GRPDCSDPsProcessor::processEnvVar(const DPCOM& dpcom)
 }
 
 //______________________________________________________________________
-
-bool GRPDCSDPsProcessor::processPair(const DPCOM& dpcom, const std::string& alias, std::pair<uint64_t, double>& p, bool& flag)
+bool GRPDCSDPsProcessor::processPairD(const DPCOM& dpcom, const std::string& alias, std::pair<uint64_t, double>& p, bool& flag)
 {
 
   // function to process Data Points that is stored in a pair
@@ -190,6 +189,39 @@ bool GRPDCSDPsProcessor::processPair(const DPCOM& dpcom, const std::string& alia
       LOG(info) << "It matches the requested string " << alias << ", let's check if the value needs to be updated";
     }
     flag = compareAndUpdate(p, dpcom);
+    return true;
+  }
+  return false;
+}
+
+//______________________________________________________________________
+bool GRPDCSDPsProcessor::processPairS(const DPCOM& dpcom, const std::string& alias, std::pair<uint64_t, std::string>& p, bool& flag)
+{
+
+  // function to process string Data Points that is stored in a pair
+
+  auto& dpcomdata = dpcom.data;
+  auto& dpid = dpcom.id;
+  std::string aliasStr(dpid.get_alias());
+
+  if (mVerbose) {
+    LOG(info) << "comparing string DP alias " << aliasStr << " to " << alias;
+  }
+
+  if (aliasStr == alias) {
+    auto val = o2::dcs::getValue<std::string>(dpcom);
+    if (mVerbose) {
+      LOG(info) << "It matches the requested string " << alias << ", let's check if the value needs to be updated";
+      LOG(info) << "old value = " << p.second << ", new value = " << val << ", call " << mCallSlice;
+    }
+    if (mCallSlice == 0 || (val != p.second)) {
+      p.first = dpcomdata.get_epoch_time();
+      p.second = val;
+      flag = true;
+      if (mVerbose) {
+ LOG(info) << "value will be updated";
+      }
+    }
     return true;
   }
   return false;
@@ -303,36 +335,22 @@ bool GRPDCSDPsProcessor::processLHCIFDPs(const DPCOM& dpcom)
       return true;
     }
   }
-  if (aliasStr == "ALI_Lumi_Source_Name") {
-    std::string val = o2::dcs::getValue<std::string>(dpcom);
-    mLHCInfo.mLumiSource.first = dpcomdata.get_epoch_time();
-    mLHCInfo.mLumiSource.second = val;
+  if (processPairS(dpcom, "ALI_Lumi_Source_Name", mLHCInfo.mLumiSource, mUpdateLHCIFInfo)) {
     if (mVerbose) {
-      LOG(info) << "Updating value " << val << " with timestamp " << dpcomdata.get_epoch_time() << " for mLumiSource";
+      LOG(info) << "Updating value " << mLHCInfo.mLumiSource.second << " with timestamp " << mLHCInfo.mLumiSource.first << " for mLumiSource";
     }
-    mUpdateLHCIFInfo = true; // we force the update of the LHCIF if the lumi source changes
     return true;
   }
-
-  if (aliasStr == "MACHINE_MODE") {
-    std::string val = o2::dcs::getValue<std::string>(dpcom);
-    mLHCInfo.mMachineMode.first = dpcomdata.get_epoch_time();
-    mLHCInfo.mMachineMode.second = val;
+  if (processPairS(dpcom, "MACHINE_MODE", mLHCInfo.mMachineMode, mUpdateLHCIFInfo)) {
     if (mVerbose) {
-      LOG(info) << "Updating value " << val << " with timestamp " << dpcomdata.get_epoch_time() << " for mMachineMode";
+      LOG(info) << "Updating value " << mLHCInfo.mMachineMode.second << " with timestamp " << mLHCInfo.mMachineMode.first << " for mMachineMode";
     }
-    mUpdateLHCIFInfo = true; // we force the update of the LHCIF if the machine mode (ION PHYSICS, PROTON PHYSICS..., see https://lhc-commissioning.web.cern.ch/systems/data-exchange/doc/LHC-OP-ES-0005-10-00.pdf) changes
     return true;
   }
-  if (aliasStr == "BEAM_MODE") {
-    std::string val = o2::dcs::getValue<std::string>(dpcom);
-    mLHCInfo.mBeamMode.first = dpcomdata.get_epoch_time();
-    mLHCInfo.mBeamMode.second = val;
+  if (processPairS(dpcom, "BEAM_MODE", mLHCInfo.mBeamMode, mUpdateLHCIFInfo)) {
     if (mVerbose) {
-      LOG(info) << "Updating value " << val << " with timestamp " << dpcomdata.get_epoch_time() << " for mBeamMode";
+      LOG(info) << "Updating value " << mLHCInfo.mBeamMode.second << " with timestamp " << mLHCInfo.mBeamMode.first << " for mBeamMode";
     }
-
-    mUpdateLHCIFInfo = true; // we force the update of the LHCIF if the beam mode (SETUP, RAMP, STABLE BEAMS..., see https://lhc-commissioning.web.cern.ch/systems/data-exchange/doc/LHC-OP-ES-0005-10-00.pdf) changes
     return true;
   }
 
