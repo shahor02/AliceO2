@@ -219,7 +219,7 @@ bool GRPDCSDPsProcessor::processPairS(const DPCOM& dpcom, const std::string& ali
       p.second = val;
       flag = true;
       if (mVerbose) {
- LOG(info) << "value will be updated";
+        LOG(info) << "value will be updated";
       }
     }
     return true;
