@@ -51,15 +51,15 @@ using DPCOM = o2::dcs::DataPointCompositeObject;
 /// A callback function to retrieve the FairMQChannel name to be used for sending
 /// messages of the specified OutputSpec
 
-o2f::InjectorFunction dcs2dpl(std::unordered_map<DPID, o2h::DataDescription>& dpid2group, uint64_t startTime, bool fbiFirst, bool verbose = false)
+o2f::InjectorFunction dcs2dpl(std::unordered_map<DPID, o2h::DataDescription>& dpid2group, bool fbiFirst, bool verbose = false)
 {
 
-  auto timesliceId = std::make_shared<size_t>(startTime);
-  return [dpid2group, timesliceId, fbiFirst, verbose](TimingInfo& tinfo, FairMQDevice& device, FairMQParts& parts, o2f::ChannelRetriever channelRetriever) {
+  return [dpid2group, fbiFirst, verbose](TimingInfo& tinfo, FairMQDevice& device, FairMQParts& parts, o2f::ChannelRetriever channelRetriever) {
     static std::unordered_map<DPID, DPCOM> cache; // will keep only the latest measurement in the 1-second wide window for each DPID
     static auto timer = std::chrono::system_clock::now();
     static auto timer0 = std::chrono::system_clock::now();
     static bool seenFBI = false;
+    static uint32_t localTFCounter = 0;
 
     LOG(debug) << "In lambda function: ********* Size of unordered_map (--> number of defined groups) = " << dpid2group.size();
     // check if we got FBI (Master) or delta (MasterDelta)
@@ -78,7 +78,7 @@ o2f::InjectorFunction dcs2dpl(std::unordered_map<DPID, o2h::DataDescription>& dp
       LOGP(error, "Cannot determine if the map is FBI or Delta, 1st DP name is {}", firstName);
     }
     if (verbose) {
-      LOGP(info, "New input of {} parts received, map type: {}, slices: {}/{}", parts.Size(), isFBI ? "FBI" : "Delta", tinfo.timeslice, *timesliceId);
+      LOGP(info, "New input of {} parts received, map type: {}, timeslice {}", parts.Size(), isFBI ? "FBI" : "Delta", tinfo.timeslice);
     }
 
     // We first iterate over the parts of the received message
@@ -129,20 +129,20 @@ o2f::InjectorFunction dcs2dpl(std::unordered_map<DPID, o2h::DataDescription>& dp
           LOG(warning) << "No data for OutputSpec " << outsp;
           continue;
         }
-        auto channel = channelRetriever(outsp, *timesliceId);
+        auto channel = channelRetriever(outsp, tinfo.timeslice);
         if (channel.empty()) {
           LOG(warning) << "No output channel found for OutputSpec " << outsp << ", discarding its data";
           it.second.clear();
           continue;
         }
 
-        hdr.tfCounter = *timesliceId; // this also
+        hdr.tfCounter = localTFCounter; // this also
         hdr.payloadSerializationMethod = o2h::gSerializationMethodNone;
         hdr.splitPayloadParts = 1;
         hdr.splitPayloadIndex = 1;
         hdr.payloadSize = it.second.size() * sizeof(DPCOM);
         hdr.firstTForbit = 0; // this should be irrelevant for DCS
-        o2h::Stack headerStack{hdr, o2::framework::DataProcessingHeader{*timesliceId, 1, creation}};
+        o2h::Stack headerStack{hdr, o2::framework::DataProcessingHeader{tinfo.timeslice, 1, creation}};
         auto fmqFactory = device.GetChannel(channel).Transport();
         auto hdMessage = fmqFactory->CreateMessage(headerStack.size(), fair::mq::Alignment{64});
         auto plMessage = fmqFactory->CreateMessage(hdr.payloadSize, fair::mq::Alignment{64});
@@ -157,19 +157,19 @@ o2f::InjectorFunction dcs2dpl(std::unordered_map<DPID, o2h::DataDescription>& dp
         parts2send->AddPart(std::move(hdMessage));
         parts2send->AddPart(std::move(plMessage));
         if (verbose) {
-          LOGP(info, "Pushing {} DPs to {} for TimeSlice {} at {}", it.second.size(), o2f::DataSpecUtils::describe(outsp), *timesliceId, creation);
+          LOGP(info, "Pushing {} DPs to {} for TimeSlice {} at {}", it.second.size(), o2f::DataSpecUtils::describe(outsp), tinfo.timeslice, creation);
         }
         it.second.clear();
       }
       // push output of every route
       for (auto& msgIt : messagesPerRoute) {
         LOG(info) << "Sending " << msgIt.second->Size() / 2 << " parts to channel " << msgIt.first;
-        o2f::sendOnChannel(device, *msgIt.second.get(), msgIt.first, *timesliceId);
+        o2f::sendOnChannel(device, *msgIt.second.get(), msgIt.first, tinfo.timeslice);
       }
       timer = timerNow;
       cache.clear();
       if (!messagesPerRoute.empty()) {
-        (*timesliceId)++; // we increment only if we send something
+        localTFCounter++;
       }
     }
   };

@@ -112,7 +112,7 @@ WorkflowSpec defineDataProcessing(ConfigContext const& config)
     "dcs-proxy",
     std::move(dcsOutputs),
     "type=pull,method=connect,address=tcp://aldcsadaposactor:60000,rateLogging=1,transport=zeromq",
-    dcs2dpl(dpid2DataDesc, 0, fbiFirst, verbose));
+    dcs2dpl(dpid2DataDesc, fbiFirst, verbose));
 
   WorkflowSpec workflow;
   workflow.emplace_back(dcsProxy);
