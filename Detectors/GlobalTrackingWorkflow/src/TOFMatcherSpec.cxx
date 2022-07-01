@@ -38,6 +38,7 @@
 #include "DataFormatsTOF/Cluster.h"
 #include "GlobalTracking/MatchTOF.h"
 #include "GlobalTrackingWorkflow/TOFMatcherSpec.h"
+#include "DetectorsBase/GRPGeomHelper.h"
 
 using namespace o2::framework;
 // using MCLabelsTr = gsl::span<const o2::MCCompLabel>;
@@ -90,6 +91,10 @@ void TOFMatcherSpec::updateTimeDependentParams(ProcessingContext& pc)
   o2::base::GRPGeomHelper::instance().checkUpdates(pc);
   static bool initOnceDone = false;
   if (!initOnceDone) { // this params need to be queried only once
+    const auto bcs = o2::base::GRPGeomHelper::instance().getGRPLHCIF()->getBunchFilling().getFilledBCs();
+    for (auto bc : bcs) {
+      o2::tof::Utils::addInteractionBC(bc, true);
+    }
     initOnceDone = true;
     // put here init-once stuff
   }

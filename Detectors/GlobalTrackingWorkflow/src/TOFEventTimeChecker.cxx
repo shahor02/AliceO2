@@ -37,6 +37,7 @@
 #include "TOFBase/EventTimeMaker.h"
 //#include "GlobalTracking/MatchTOF.h"
 #include "GlobalTrackingWorkflow/TOFEventTimeChecker.h"
+#include "DetectorsBase/GRPGeomHelper.h"
 
 #include "TSystem.h"
 #include "TFile.h"
@@ -101,6 +102,19 @@ class TOFEventTimeChecker : public Task
   void processEvent(std::vector<MyTrack>& tracks);
 
  private:
+  void updateTimeDependentParams(ProcessingContext& pc)
+  {
+    o2::base::GRPGeomHelper::instance().checkUpdates(pc);
+    static bool initOnceDone = false;
+    if (!initOnceDone) { // this params need to be queried only once
+      initOnceDone = true;
+      const auto bcs = o2::base::GRPGeomHelper::instance().getGRPLHCIF()->getBunchFilling().getFilledBCs();
+      for (auto bc : bcs) {
+        o2::tof::Utils::addInteractionBC(bc, true);
+      }
+    }
+  }
+
   bool mIsTPC;
   bool mIsTPCTRD;
   bool mIsITSTPCTRD;
@@ -521,6 +535,7 @@ void TOFEventTimeChecker::run(ProcessingContext& pc)
   if (!mTOFClustersArrayInp.size()) {
     return;
   }
+  updateTimeDependentParams(pc);
 
   auto creator = [this](auto& trk, GID gid, float time0, float terr) {
     this->fillMatching(gid, time0, terr);
