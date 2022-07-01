@@ -113,6 +113,8 @@ void TRDGlobalTracking::updateTimeDependentParams(ProcessingContext& pc)
 
     mTracker->PrintSettings();
     LOG(info) << "Strict matching mode is " << ((mStrict) ? "ON" : "OFF");
+    LOGF(info, "The search road in time for ITS-TPC tracks is set to %.1f sigma and %.2f us are added to it on top",
+         mRec->GetParam().rec.trd.nSigmaTerrITSTPC, mRec->GetParam().rec.trd.addTimeRoadITSTPC);
   }
   auto& elParam = o2::tpc::ParameterElectronics::Instance();
   auto& gasParam = o2::tpc::ParameterGas::Instance();
