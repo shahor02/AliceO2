@@ -38,7 +38,6 @@
 #include "DataFormatsTOF/Cluster.h"
 #include "GlobalTracking/MatchTOF.h"
 #include "GlobalTrackingWorkflow/TOFMatcherSpec.h"
-#include "DetectorsBase/GRPGeomHelper.h"
 
 using namespace o2::framework;
 // using MCLabelsTr = gsl::span<const o2::MCCompLabel>;
