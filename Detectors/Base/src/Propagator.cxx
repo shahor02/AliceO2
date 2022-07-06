@@ -600,8 +600,8 @@ GPUd() void PropagatorImpl<value_T>::estimateLTFast(o2::track::TrackLTIntegral& 
       ydca = -f * csp2;
       auto dx = xdca - trc.getX(), dy = ydca - trc.getY(), dz = dx * trc.getTgl() / csp;
       return math_utils::detail::sqrt<value_type>(dx * dx + dy * dy + dz * dz);
-    } else { //  track is parallel to Y axis
-      xdca = trc.getX(); // ydca = 0
+    } else {                                                                                                                           //  track is parallel to Y axis
+      xdca = trc.getX();                                                                                                               // ydca = 0
       return math_utils::detail::abs<value_type>(trc.getY() * math_utils::detail::sqrt<value_type>(1. + trc.getTgl() * trc.getTgl())); // distance from the current point to DCA
     }
   };
