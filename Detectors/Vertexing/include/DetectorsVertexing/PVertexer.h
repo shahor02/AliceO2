@@ -66,7 +66,7 @@ class PVertexer
               const gsl::span<const o2::MCCompLabel> lblTracks, std::vector<o2::MCEventLabel>& lblVtx);
 
   int processFromExternalPool(const std::vector<TrackVF>& pool, std::vector<PVertex>& vertices, std::vector<o2d::VtxTrackIndex>& vertexTrackIDs, std::vector<V2TRef>& v2tRefs);
-  
+
   bool findVertex(const VertexingInput& input, PVertex& vtx);
 
   void setStartIR(const o2::InteractionRecord& ir) { mStartIR = ir; } ///< set InteractionRecods for the beginning of the TF

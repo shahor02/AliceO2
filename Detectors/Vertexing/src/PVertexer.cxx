@@ -387,8 +387,8 @@ bool PVertexer::solveVertex(VertexSeed& vtxSeed) const
   vtxSeed.setChi2((vtxSeed.getNContributors() - vtxSeed.wghSum) / vtxSeed.scaleSig2ITuk2I); // calculate chi^2
   auto newScale = vtxSeed.wghChi2 / vtxSeed.wghSum;
   LOG(debug) << "Solve: wghChi2=" << vtxSeed.wghChi2 << " wghSum=" << vtxSeed.wghSum << " -> scale= "
-	    << newScale << " old scale " << vtxSeed.scaleSigma2 << " prevScale: " << vtxSeed.scaleSigma2Prev
-	    << " n-contributors=" << vtxSeed.getNContributors();
+             << newScale << " old scale " << vtxSeed.scaleSigma2 << " prevScale: " << vtxSeed.scaleSigma2Prev
+             << " n-contributors=" << vtxSeed.getNContributors();
   vtxSeed.setScale(newScale < mPVParams->minScale2 ? mPVParams->minScale2 : newScale, mTukey2I);
   return true;
 }
@@ -699,7 +699,7 @@ void PVertexer::end()
   mDebugDBScanTree->Write();
   mDebugVtxCompTree->Write();
   mDebugVtxTree->Write();
-  
+
   mDebugPoolTree.reset();
   mDebugDBScanTree.reset();
   mDebugVtxCompTree.reset();

@@ -20,10 +20,10 @@ using namespace o2::vertexing;
 // macro to run PVertex finder for the particular TF from the TrackVF pool dumped via PVertexer::dumpPool() method
 // Must be run only in compiled mode
 
-void PVFromPool(int run,                               // run number
-	    const char* poolName,                  // filename of the track pool dump
-	    const std::string& vtopts = ""         // additional options for ConfigurableParam objects
-	    )
+void PVFromPool(int run,                       // run number
+                const char* poolName,          // filename of the track pool dump
+                const std::string& vtopts = "" // additional options for ConfigurableParam objects
+)
 {
   TFile pf(poolName);
   const auto* pvecPtr = (std::vector<TrackVF>*)pf.GetObjectUnchecked("pool");
@@ -33,7 +33,7 @@ void PVFromPool(int run,                               // run number
 
   auto& cm = o2::ccdb::BasicCCDBManager::instance();
   auto rlim = cm.getRunDuration(run);
-  long ts = rlim.first + (rlim.second - rlim.first)/2;
+  long ts = rlim.first + (rlim.second - rlim.first) / 2;
   cm.getSpecific<TGeoManager>("GLO/Config/GeometryAligned", ts);
 
   const auto* grpLHCIF = cm.getSpecific<o2::parameters::GRPLHCIFData>("GLO/Config/GRPLHCIF", ts);
@@ -42,17 +42,17 @@ void PVFromPool(int run,                               // run number
 
   const auto& alpParams = o2::itsmft::DPLAlpideParam<o2::detectors::DetID::ITS>::Instance();
   alpParams.printKeyValues();
-  
+
   cm.getSpecific<o2::itsmft::DPLAlpideParam<o2::detectors::DetID::ITS>>("ITS/Config/AlpideParam", ts);
-  
+
   alpParams.printKeyValues();
-  
+
   float ITSROFrameLengthMUS = alpParams.roFrameLengthInBC * o2::constants::lhc::LHCBunchSpacingNS * 1e-3; // ITS ROFrame duration in \mus
 
   o2::conf::ConfigurableParam::updateFromString(vtopts);
 
   PVertexerParams::Instance().printKeyValues();
-  
+
   o2::vertexing::PVertexer pvfinder;
   pvfinder.setBunchFilling(grpLHCIF->getBunchFilling());
   pvfinder.setITSROFrameLength(ITSROFrameLengthMUS);
@@ -61,7 +61,7 @@ void PVFromPool(int run,                               // run number
   pvfinder.processFromExternalPool(*pvecPtr, vertices, vertexTrackIDs, v2tRefs);
   pvfinder.end();
   timer.Stop();
-  
+
   LOGP(info, "Found {} PVs, Time CPU/Real:{:.3f}/{:.3f} (DBScan: {:.4f}, Finder:{:.4f}, Rej.Debris:{:.4f}, Reattach:{:.4f}) | {} trials for {} TZ-clusters, max.trials: {}, Slowest TZ-cluster: {} ms of mult {}",
        vertices.size(), timer.CpuTime(), timer.RealTime(),
        pvfinder.getTimeDBScan().CpuTime(), pvfinder.getTimeVertexing().CpuTime(), pvfinder.getTimeDebris().CpuTime(), pvfinder.getTimeReAttach().CpuTime(),
