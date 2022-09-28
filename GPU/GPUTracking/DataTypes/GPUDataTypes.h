@@ -211,7 +211,7 @@ struct ConstPtr {
 };
 
 template <template <typename T> class S>
-struct GPUCalibObjectsTemplate {  // use only pointers on PODs or flat objects here
+struct GPUCalibObjectsTemplate { // use only pointers on PODs or flat objects here
   typename S<TPCFastTransform>::type* fastTransform = nullptr;
   typename S<TPCFastTransform>::type* fastTransformRef = nullptr;
   typename S<CorrectionMapsHelper>::type* fastTransformHelper = nullptr;
