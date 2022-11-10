@@ -253,14 +253,14 @@ class TPCDPLDigitizerTask : public BaseDPLDigitizer
       ccdbQueryLastTSliceChecked = tslice;
       o2::tpc::VDriftHelper::extractCCDBInputs(pc);
       if (mTPCVDriftHelper.isUpdated()) {
-	const auto& vd = mTPCVDriftHelper.getVDriftObject();
-	LOGP(info, "Updating TPC VDrift with factor of {} wrt reference {} from source {}", vd.corrFact, vd.refVDrift, mTPCVDriftHelper.getSourceName());
-	mDigitizer.setVDrift(vd.corrFact * vd.refVDrift);
-	mTPCVDriftHelper.acknowledgeUpdate();
+        const auto& vd = mTPCVDriftHelper.getVDriftObject();
+        LOGP(info, "Updating TPC VDrift with factor of {} wrt reference {} from source {}", vd.corrFact, vd.refVDrift, mTPCVDriftHelper.getSourceName());
+        mDigitizer.setVDrift(vd.corrFact * vd.refVDrift);
+        mTPCVDriftHelper.acknowledgeUpdate();
       }
       // RS Other CCDB queries must be added to this block
     }
-    
+
     if (std::filesystem::exists("ThresholdMap.root")) {
       LOG(info) << "TPC: Using zero suppression map from 'ThresholdMap.root'";
       cdb.setThresholdMapFromFile("ThresholdMap.root");
