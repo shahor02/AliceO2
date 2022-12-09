@@ -554,7 +554,7 @@ void AlignableVolume::writeLabeledPedeResults(FILE* parOut) const
   // write parameters with labels
   for (int i = 0; i < mNDOFs; i++) {
     fprintf(parOut, "%9d %+e %+e\t! %s %d:%s vol:%d %s %s\n", getParLab(i), -getParVal(i), getParErr(i), GetName(), i, sDOFName[i], getVolID(),
-     isFreeDOF(i) ? "   " : "FXU", isZeroAbs(getParVal(i)) ? "FXP" : "   ");
+            isFreeDOF(i) ? "   " : "FXU", isZeroAbs(getParVal(i)) ? "FXP" : "   ");
   }
   // children volume
   int nch = getNChildren();

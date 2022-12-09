@@ -126,7 +126,7 @@ void AlignableDetectorTRD::writeLabeledPedeResults(FILE* parOut) const
   //
   for (int ip = 0; ip < getNCalibDOFs(); ip++) {
     fprintf(parOut, "%9d %+e %+e\t! calib param %d of %s %s %s\n", getParLab(ip), -getParVal(ip), getParErr(ip), ip, GetName(),
-     isFreeDOF(ip) ? "   " : "FXU", o2::align::utils::isZeroAbs(getParVal(ip)) ? "FXP" : "   ");
+            isFreeDOF(ip) ? "   " : "FXU", o2::align::utils::isZeroAbs(getParVal(ip)) ? "FXP" : "   ");
   }
   //
 }

@@ -120,10 +120,10 @@ void Controller::init()
   mVtxSens = std::make_unique<EventVertex>(this);
   mVtxSens->setInternalID(1);
   const auto& algConf = AlignConfig::Instance();
-  if (algConf.MPRecOutFraction>0. || mInstanceID==0) {
+  if (algConf.MPRecOutFraction > 0. || mInstanceID == 0) {
     mMPRecOutFraction = std::abs(algConf.MPRecOutFraction);
   }
-  if (algConf.controlFraction>0. || mInstanceID==0) {
+  if (algConf.controlFraction > 0. || mInstanceID == 0) {
     mControlFraction = std::abs(algConf.controlFraction);
   }
 }
@@ -1068,7 +1068,7 @@ void Controller::genPedeSteerFile(const Option_t* opt) const
     fprintf(strFl, "%s%s %-20s %2d %.2f %s\n", cmt[kOn], "method", kSolMeth[i], kDefNIter, kDefDelta, cmt[kOnOn]);
   }
   fprintf(strFl, "\n%sskipemptycons\n", cmt[kOff]);
-  fprintf(strFl, "\n%sthreads 20 1\n",  cmt[kOff]);
+  fprintf(strFl, "\n%sthreads 20 1\n", cmt[kOff]);
   //
   const float kDefChi2F0 = 10., kDefChi2F = 3.; // chi2 factors for 1st and following iterations
   const float kDefDWFrac = 0.1;                 // cut outliers with downweighting above this factor
