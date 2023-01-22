@@ -75,7 +75,7 @@ class trackInterface<o2::track::TrackParCov> : public o2::track::TrackParCov
 
   GPUdi() bool CheckNumericalQuality() const { return true; }
 
-  GPUdi() void setPileUpDistance(unsigned char bwd, unsigned char fwd) { setUserField( (((unsigned short)bwd) << 8) | fwd); }
+  GPUdi() void setPileUpDistance(unsigned char bwd, unsigned char fwd) { setUserField((((unsigned short)bwd) << 8) | fwd); }
   GPUdi() bool hasPileUpInfo() const { return getUserField() != 0; }
   GPUdi() unsigned char getPileUpDistanceBwd() const { return ((unsigned char)getUserField()) >> 8; }
   GPUdi() unsigned char getPileUpDistanceFwd() const { return ((unsigned char)getUserField()) & 255; }
