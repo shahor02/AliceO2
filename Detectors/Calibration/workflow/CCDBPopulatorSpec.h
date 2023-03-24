@@ -120,11 +120,11 @@ class CCDBPopulator : public o2::framework::Task
       int res = mAPI.storeAsBinaryFile(&pld[0], pld.size(), wrp->getFileName(), wrp->getObjectType(), wrp->getPath(),
                                        *md, wrp->getStartValidityTimestamp(), wrp->getEndValidityTimestamp());
       if (res) {
-	if (mFatalOnFailure) {
-	  LOGP(fatal, "failed on uploading to {} / {} for [{}:{}]", mAPI.getURL(), wrp->getPath(), wrp->getStartValidityTimestamp(), wrp->getEndValidityTimestamp());
-	} else {
-	  LOGP(error, "failed on uploading to {} / {} for [{}:{}]", mAPI.getURL(), wrp->getPath(), wrp->getStartValidityTimestamp(), wrp->getEndValidityTimestamp());
-	}
+        if (mFatalOnFailure) {
+          LOGP(fatal, "failed on uploading to {} / {} for [{}:{}]", mAPI.getURL(), wrp->getPath(), wrp->getStartValidityTimestamp(), wrp->getEndValidityTimestamp());
+        } else {
+          LOGP(error, "failed on uploading to {} / {} for [{}:{}]", mAPI.getURL(), wrp->getPath(), wrp->getStartValidityTimestamp(), wrp->getEndValidityTimestamp());
+        }
       }
       // do we need to override previous object?
       if (wrp->isAdjustableEOV() && !mAPI.isSnapshotMode()) {
@@ -132,22 +132,21 @@ class CCDBPopulator : public o2::framework::Task
       }
       // if requested, make sure that the new object can be queried
       if (mValidateUpload || wrp->getValidateUpload()) {
-	constexpr long MAXDESYNC = 3;
-	auto headers = mAPI.retrieveHeaders(wrp->getPath(), {}, wrp->getStartValidityTimestamp() + (wrp->getEndValidityTimestamp()-wrp->getStartValidityTimestamp())/2);
-	if (headers.empty() ||
-	    std::atol(headers["Created"].c_str()) < uploadTS - MAXDESYNC ||
-	    std::atol(headers["Valid-From"].c_str()) != wrp->getStartValidityTimestamp() ||
-	    std::atol(headers["Valid-Until"].c_str()) != wrp->getEndValidityTimestamp()) {
-	  if (mFatalOnFailure) {
-	    LOGP(fatal, "Failed to validate upload to {} / {} for [{}:{}]", mAPI.getURL(), wrp->getPath(), wrp->getStartValidityTimestamp(), wrp->getEndValidityTimestamp());
-	  } else {
-	    LOGP(error, "Failed to validate upload to {} / {} for [{}:{}]", mAPI.getURL(), wrp->getPath(), wrp->getStartValidityTimestamp(), wrp->getEndValidityTimestamp());
-	  }	    
-	} else {
-	  LOGP(important, "Validated upload to {} / {} for [{}:{}]", mAPI.getURL(), wrp->getPath(), wrp->getStartValidityTimestamp(), wrp->getEndValidityTimestamp());
-	}
+        constexpr long MAXDESYNC = 3;
+        auto headers = mAPI.retrieveHeaders(wrp->getPath(), {}, wrp->getStartValidityTimestamp() + (wrp->getEndValidityTimestamp() - wrp->getStartValidityTimestamp()) / 2);
+        if (headers.empty() ||
+            std::atol(headers["Created"].c_str()) < uploadTS - MAXDESYNC ||
+            std::atol(headers["Valid-From"].c_str()) != wrp->getStartValidityTimestamp() ||
+            std::atol(headers["Valid-Until"].c_str()) != wrp->getEndValidityTimestamp()) {
+          if (mFatalOnFailure) {
+            LOGP(fatal, "Failed to validate upload to {} / {} for [{}:{}]", mAPI.getURL(), wrp->getPath(), wrp->getStartValidityTimestamp(), wrp->getEndValidityTimestamp());
+          } else {
+            LOGP(error, "Failed to validate upload to {} / {} for [{}:{}]", mAPI.getURL(), wrp->getPath(), wrp->getStartValidityTimestamp(), wrp->getEndValidityTimestamp());
+          }
+        } else {
+          LOGP(important, "Validated upload to {} / {} for [{}:{}]", mAPI.getURL(), wrp->getPath(), wrp->getStartValidityTimestamp(), wrp->getEndValidityTimestamp());
+        }
       }
-      
     }
   }
 

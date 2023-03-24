@@ -45,8 +45,7 @@ class CcdbObjectInfo
   CcdbObjectInfo(std::string path, std::string objType, std::string flName,
                  std::map<std::string, std::string> metadata,
                  long startValidityTimestamp, long endValidityTimestamp, bool adjustableEOV = true, bool validateUpload = false)
-    : mObjType(std::move(objType)), mFileName(std::move(flName)), mPath(std::move(path)), mMD(std::move(metadata)),
-      mStart(startValidityTimestamp), mEnd(endValidityTimestamp), mValidateUpload(validateUpload)
+    : mObjType(std::move(objType)), mFileName(std::move(flName)), mPath(std::move(path)), mMD(std::move(metadata)), mStart(startValidityTimestamp), mEnd(endValidityTimestamp), mValidateUpload(validateUpload)
   {
     if (adjustableEOV) {
       setAdjustableEOV();
