@@ -225,11 +225,11 @@ o2::framework::DataProcessorSpec specCombiner(std::string const& name, std::vect
       mNThreads = std::max(1, ic.options().get<int>("combine-nthreads"));
       if (mNThreads > 1) {
 #ifdef WITH_OPENMP
-      LOGP(info, "Combined tasks will be run with {} threads", mNThreads);
-      ROOT::EnableThreadSafety();
+        LOGP(info, "Combined tasks will be run with {} threads", mNThreads);
+        ROOT::EnableThreadSafety();
 #else
-      LOGP(warn, "{} threads requested for combined tasks but OpenMP is not detected, link it from the workflow CMakeList", mNThreads);
-      mNThreads = 1;
+        LOGP(warn, "{} threads requested for combined tasks but OpenMP is not detected, link it from the workflow CMakeList", mNThreads);
+        mNThreads = 1;
 #endif
       }
       for (auto& t : tasks) {
