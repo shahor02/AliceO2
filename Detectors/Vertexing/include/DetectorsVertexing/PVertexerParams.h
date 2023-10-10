@@ -73,6 +73,11 @@ struct PVertexerParams : public o2::conf::ConfigurableParamHelper<PVertexerParam
   float maxChi2TZDebris = 2000.;           ///< don't consider vertices with mutual chi2 exceeding this (for pp should be ~10)
   float addTimeSigma2Debris = 0.05 * 0.05; ///< increment time error^2 by this amount when calculating vertex-to-vertex chi2
   float addZSigma2Debris = 0.005 * 0.005;  ///< increment z error^2 by this amount when calculating vertex-to-vertex chi2
+  //
+  // tMAD clean up
+  float maxTMAD = -1.;   ///< max accepted tMAD, not tMAD cleanup if negative
+  float minTMAD = -1.;   ///< min accepted tMAD
+  float slopeTMAD = 0.0; ///< correct estimated tMAD with tMAD += slopeTMAD*(Ncontrib - NcontribITSonly) (~ -0.00011127)
 
   // validation with externally provided InteractionRecords (e.g. from FT0)
   int minNContributorsForIRcut = 4;     ///< do not apply IR cut to vertices below IR tagging efficiency threshold

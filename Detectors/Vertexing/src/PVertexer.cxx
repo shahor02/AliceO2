@@ -17,6 +17,7 @@
 #include "DetectorsBase/Propagator.h"
 #include "Math/SMatrix.h"
 #include "Math/SVector.h"
+#include "MathUtils/fit.h"
 #include <unordered_map>
 #include "CommonUtils/StringUtils.h"
 #include <TH2F.h>
@@ -82,16 +83,39 @@ int PVertexer::runVertexing(const gsl::span<o2d::GlobalTrackID> gids, const gsl:
   }
 #endif
 
-  mTimeDebris.Start();
+  if (mPVParams->maxTMAD > 0) {
+    mTimeMADSel.Start();
+    applyTMADSelection(verticesLoc, vtTimeSortID, v2tRefsLoc, trackIDs);
+    mTimeMADSel.Stop();
+  }
+  int n = 0;
+  for (auto i : vtTimeSortID)
+    if (i < 0)
+      n++;
+  LOGP(info, "After MAD: {} of {}", n, vtTimeSortID.size());
+
   if (mPVParams->applyDebrisReduction) {
+    mTimeDebris.Start();
     reduceDebris(verticesLoc, vtTimeSortID, lblVtxLoc);
+    mTimeDebris.Stop();
   }
-  mTimeDebris.Stop();
-  mTimeReAttach.Start();
+  n = 0;
+  for (auto i : vtTimeSortID)
+    if (i < 0)
+      n++;
+  LOGP(info, "After Debris: {} of {}", n, vtTimeSortID.size());
+
   if (mPVParams->applyReattachment) {
+    mTimeReAttach.Start();
     reAttach(verticesLoc, vtTimeSortID, trackIDs, v2tRefsLoc);
+    mTimeReAttach.Stop();
   }
-  mTimeReAttach.Stop();
+  n = 0;
+  for (auto i : vtTimeSortID)
+    if (i < 0)
+      n++;
+  LOGP(info, "After Reattach: {} of {}", n, vtTimeSortID.size());
+
   if (lblTracks.size()) { // at this stage labels are needed just for the debug output
     createMCLabels(lblTracks, trackIDs, v2tRefsLoc, lblVtxLoc);
   }
@@ -491,7 +515,7 @@ void PVertexer::reAttach(std::vector<PVertex>& vertices, std::vector<int>& timeS
       if (dt > tRange) { // all following vertices will be have higher time than this track, stop checking
         break;
       }
-      bool useTime = trc.gid.getSource() != GTrackID::ITS && mPVParams->useTimeInChi2; // TODO Check if it is ok to not account time error for ITS tracks
+      bool useTime = (trc.gid.getSource() != GTrackID::ITS) && mPVParams->useTimeInChi2; // TODO Check if it is ok to not account time error for ITS tracks
       float wgh = 1.f - mTukey2I * trc.evalChi2ToVertex(vertices[vtvec[ivt].first], useTime);
       if (wgh > trc.wgh) {
         trc.wgh = wgh;
@@ -534,6 +558,35 @@ void PVertexer::reAttach(std::vector<PVertex>& vertices, std::vector<int>& timeS
 }
 
 //___________________________________________________________________
+void PVertexer::applyTMADSelection(std::vector<PVertex>& vertices, std::vector<int>& timeSort, const std::vector<V2TRef>& v2tRefs, const std::vector<uint32_t>& trackIDs)
+{
+  int nv = timeSort.size(), nkill = 0;
+  for (int ivt = 0; ivt < nv; ivt++) {
+    int iv = timeSort[ivt];
+    if (iv < 0) { // already rejected?
+      continue;
+    }
+    const auto& pv = vertices[iv];
+    float tVtx = pv.getTimeStamp().getTimeStamp();
+    const auto trefs = v2tRefs[iv];
+    int idMin = trefs.getFirstEntry(), idMax = idMin + trefs.getEntries();
+    std::vector<float> dtvec;
+    dtvec.reserve(pv.getNContributors());
+    for (int i = idMin; i < idMax; i++) {
+      const auto& trc = mTracksPool[trackIDs[i]];
+      if (trc.gid.getSource() != GTrackID::Source::ITS) { // ITS should not be accounted in the mad MAD as it has no real errors
+        dtvec.push_back(trc.timeEst.getTimeStamp() - tVtx);
+      }
+    }
+    float tmad = o2::math_utils::MAD2Sigma(dtvec.size(), dtvec.data()) + mPVParams->slopeTMAD * dtvec.size();
+    if (tmad > mPVParams->maxTMAD || tmad < mPVParams->minTMAD) {
+      timeSort[ivt] = -1; // disable vertex
+      LOGP(info, "Killing vertex {} with MAD {}, {} of {} killed", iv, tmad, ++nkill, nv);
+    }
+  }
+}
+
+//___________________________________________________________________
 void PVertexer::reduceDebris(std::vector<PVertex>& vertices, std::vector<int>& timeSort, const std::vector<o2::MCEventLabel>& lblVtx)
 {
   // eliminate low multiplicity vertices in the close proximity of high mult ones, assuming that these are their debries
@@ -542,7 +595,7 @@ void PVertexer::reduceDebris(std::vector<PVertex>& vertices, std::vector<int>& t
   std::vector<int> multSort(nv); // sort time indices in multiplicity
   std::iota(multSort.begin(), multSort.end(), 0);
   std::sort(multSort.begin(), multSort.end(), [&timeSort, vertices](int i, int j) {
-    return vertices[timeSort[i]].getNContributors() > vertices[timeSort[j]].getNContributors();
+    return timeSort[i] < 0 ? false : (timeSort[j] < 0 ? true : vertices[timeSort[i]].getNContributors() > vertices[timeSort[j]].getNContributors());
   });
 
   // suppress vertex pointed by j if needed, if time difference between i and j is too large, return true to stop checking
@@ -595,6 +648,16 @@ void PVertexer::reduceDebris(std::vector<PVertex>& vertices, std::vector<int>& t
     }
     return false;
   };
+
+  // check
+  for (int im = 0; im < nv; im++) {
+    int it = multSort[im];
+    if (timeSort[it] < 0) {
+      LOGP(info, "mid#{:4d} vid:{:+4d}", it, timeSort[it]);
+    } else {
+      LOGP(info, "mid#{:4d} vid:{:+4d} | N={} T={}", it, timeSort[it], vertices[timeSort[it]].getNContributors(), vertices[timeSort[it]].getTimeStamp().getTimeStamp());
+    }
+  }
 
   for (int im = 0; im < nv; im++) { // loop from highest multiplicity to lowest one
     int it = multSort[im];
@@ -1214,4 +1277,16 @@ int PVertexer::processFromExternalPool(const std::vector<TrackVF>& pool, std::ve
     gids.push_back(tr.gid);
   }
   return runVertexing(gids, bcData, vertices, vertexTrackIDs, v2tRefs, lblTracks, lblVtx);
+}
+
+//______________________________________________
+void PVertexer::setTrackSources(GTrackID::mask_t s)
+{
+  mTrackSrc = s;
+  // fill vector of sources to consider
+  for (int is = 0; is < GTrackID::NSources; is++) {
+    if (mTrackSrc[is]) {
+      mSrcVec.push_back(is);
+    }
+  }
 }

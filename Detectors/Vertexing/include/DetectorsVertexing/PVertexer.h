@@ -82,6 +82,7 @@ class PVertexer
   void setBz(float bz) { mBz = bz; }
   void setValidateWithIR(bool v) { mValidateWithIR = v; }
   bool getValidateWithIR() const { return mValidateWithIR; }
+  void setTrackSources(GTrackID::mask_t s);
 
   auto& getTracksPool() const { return mTracksPool; }
   auto& getTimeZClusters() const { return mTimeZClusters; }
@@ -117,6 +118,7 @@ class PVertexer
   TStopwatch& getTimeDBScan() { return mTimeDBScan; }
   TStopwatch& getTimeVertexing() { return mTimeVertexing; }
   TStopwatch& getTimeDebris() { return mTimeDebris; }
+  TStopwatch& getTimeMADSel() { return mTimeMADSel; }
   TStopwatch& getTimeReAttach() { return mTimeReAttach; }
 
   void setPoolDumpDirectory(const std::string& d) { mPoolDumpDirectory = d; }
@@ -144,6 +146,7 @@ class PVertexer
   bool upscaleSigma(VertexSeed& vtxSeed) const;
   bool relateTrackToMeanVertex(o2::track::TrackParCov& trc, float vtxErr2);
   bool relateTrackToVertex(o2::track::TrackParCov& trc, const o2d::VertexBase& vtxSeed) const;
+  void applyTMADSelection(std::vector<PVertex>& vertices, std::vector<int>& timeSort, const std::vector<V2TRef>& v2tRefs, const std::vector<uint32_t>& trackIDs);
 
   template <typename TR>
   void createTracksPool(const TR& tracks, gsl::span<const o2d::GlobalTrackID> gids);
@@ -183,6 +186,8 @@ class PVertexer
   //
 
   ///========== Parameters to be set externally, e.g. from CCDB ====================
+  GTrackID::mask_t mTrackSrc{};
+  std::vector<int> mSrcVec{};
   const PVertexerParams* mPVParams = nullptr;
   float mTukey2I = 0;                        ///< 1./[Tukey parameter]^2
   static constexpr float kDefTukey = 5.0f;   ///< def.value for tukey constant
@@ -198,6 +203,7 @@ class PVertexer
   TStopwatch mTimeDBScan;
   TStopwatch mTimeVertexing;
   TStopwatch mTimeDebris;
+  TStopwatch mTimeMADSel;
   TStopwatch mTimeReAttach;
   std::string mPoolDumpDirectory{};
 #ifdef _PV_DEBUG_TREE_
