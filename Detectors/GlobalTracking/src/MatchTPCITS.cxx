@@ -170,7 +170,7 @@ void MatchTPCITS::clear()
 
   if (mMCTruthON) {
     mTPCLblWork.clear();
-    mITSLblWork.clear();    
+    mITSLblWork.clear();
   }
 }
 
@@ -452,7 +452,7 @@ bool MatchTPCITS::prepareTPCData()
     mTPCTrkLabels = inp.getTPCTracksMCLabels();
   }
 
-  int ntr = mTPCTracksArray.size(), ntrW = 0.7*ntr;
+  int ntr = mTPCTracksArray.size(), ntrW = 0.7 * ntr;
   mMatchRecordsTPC.reserve(mParams->maxMatchCandidates * ntrW); // number of records might be actually more than N tracks!
   mTPCWork.reserve(ntrW);
   if (mMCTruthON) {
@@ -1261,14 +1261,14 @@ void MatchTPCITS::refitWinners(pmr::vector<o2::dataformats::TrackTPCITS>& matche
 {
   ///< refit winning tracks
   mTimer[SWRefit].Start(false);
-  matchedTracks.reserve( mNMatches + mABWinnersIDs.size() );
+  matchedTracks.reserve(mNMatches + mABWinnersIDs.size());
   if (mMCTruthON) {
-    matchLabels.reserve( mNMatches + mABWinnersIDs.size() );
+    matchLabels.reserve(mNMatches + mABWinnersIDs.size());
   }
   if (mVDriftCalibOn) {
     calib.reserve(mNCalibPrelim * 1.2 + 1);
   }
-  
+
   LOG(debug) << "Refitting winner matches";
   mWinnerChi2Refit.resize(mITSWork.size(), -1.f);
   int iITS;
@@ -1714,7 +1714,7 @@ int MatchTPCITS::prepareInteractionTimes()
 
 //______________________________________________
 bool MatchTPCITS::runAfterBurner(pmr::vector<o2::dataformats::TrackTPCITS>& matchedTracks, pmr::vector<o2::MCCompLabel>& matchLabels, pmr::vector<o2::MCCompLabel>& ABTrackletLabels,
-				 pmr::vector<int>& ABTrackletClusterIDs, pmr::vector<o2::itsmft::TrkClusRef>& ABTrackletRefs, pmr::vector<o2::dataformats::Triplet<float, float, float>>& calib)
+                                 pmr::vector<int>& ABTrackletClusterIDs, pmr::vector<o2::itsmft::TrkClusRef>& ABTrackletRefs, pmr::vector<o2::dataformats::Triplet<float, float, float>>& calib)
 {
   mTimer[SWABSeeds].Start(false);
   mNABRefsClus = 0;
@@ -1813,7 +1813,7 @@ void MatchTPCITS::refitABWinners(pmr::vector<o2::dataformats::TrackTPCITS>& matc
 {
   // refit normal matches
   refitWinners(matchedTracks, matchLabels, calib);
-  
+
   ABTrackletClusterIDs.reserve(mNABRefsClus);
   ABTrackletRefs.reserve(mABWinnersIDs.size());
   if (mMCTruthON) {

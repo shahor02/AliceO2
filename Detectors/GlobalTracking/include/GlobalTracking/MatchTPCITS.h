@@ -332,9 +332,9 @@ class MatchTPCITS
                    pmr::vector<o2::MCCompLabel>& ABTrackletLabels,
                    pmr::vector<o2::dataformats::Triplet<float, float, float>>& calib);
   bool runAfterBurner(pmr::vector<o2::dataformats::TrackTPCITS>& matchedTracks, pmr::vector<o2::MCCompLabel>& matchLabels, pmr::vector<o2::MCCompLabel>& ABTrackletLabels, pmr::vector<int>& ABTrackletClusterIDs,
-		      pmr::vector<o2::itsmft::TrkClusRef>& ABTrackletRefs, pmr::vector<o2::dataformats::Triplet<float, float, float>>& calib);
+                      pmr::vector<o2::itsmft::TrkClusRef>& ABTrackletRefs, pmr::vector<o2::dataformats::Triplet<float, float, float>>& calib);
   void refitABWinners(pmr::vector<o2::dataformats::TrackTPCITS>& matchedTracks, pmr::vector<o2::MCCompLabel>& matchLabels, pmr::vector<o2::MCCompLabel>& ABTrackletLabels, pmr::vector<int>& ABTrackletClusterIDs,
-		      pmr::vector<o2::itsmft::TrkClusRef>& ABTrackletRefs, pmr::vector<o2::dataformats::Triplet<float, float, float>>& calib);
+                      pmr::vector<o2::itsmft::TrkClusRef>& ABTrackletRefs, pmr::vector<o2::dataformats::Triplet<float, float, float>>& calib);
   bool refitABTrack(int iITSAB, const TPCABSeed& seed, pmr::vector<o2::dataformats::TrackTPCITS>& matchedTracks, pmr::vector<int>& ABTrackletClusterIDs, pmr::vector<o2::itsmft::TrkClusRef>& ABTrackletRefs);
 #endif // CLING
   void setSkipTPCOnly(bool v) { mSkipTPCOnly = v; }
@@ -638,8 +638,8 @@ class MatchTPCITS
   std::vector<BracketF> mITSROFTimes;  ///< min/max times of ITS ROFs in \mus
   std::vector<TrackLocTPC> mTPCWork;   ///< TPC track params prepared for matching
   std::vector<TrackLocITS> mITSWork;   ///< ITS track params prepared for matching
-  std::vector<o2::MCCompLabel> mTPCLblWork;             ///< TPC track labels
-  std::vector<o2::MCCompLabel> mITSLblWork;             ///< ITS track labels
+  std::vector<o2::MCCompLabel> mTPCLblWork; ///< TPC track labels
+  std::vector<o2::MCCompLabel> mITSLblWork; ///< ITS track labels
   std::vector<float> mWinnerChi2Refit; ///< vector of refitChi2 for winners
 
   // ------------------------------
@@ -648,7 +648,7 @@ class MatchTPCITS
   std::vector<int> mTPCABIndexCache;
   std::vector<int> mABWinnersIDs;
   std::vector<int> mABClusterLinkIndex; ///< index of 1st ABClusterLink for every cluster used by AfterBurner, -1: unused, -10: used by external ITS tracks
-  
+
   ///< per sector indices of TPC track entry in mTPCWork
   std::array<std::vector<int>, o2::constants::math::NSectors> mTPCSectIndexCache;
   ///< per sector indices of ITS track entry in mITSWork
