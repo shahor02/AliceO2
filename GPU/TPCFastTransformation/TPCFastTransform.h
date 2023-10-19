@@ -338,7 +338,7 @@ class TPCFastTransform : public FlatObject
   float mLumiError;       ///< error on luminosity
   float mLumiScaleFactor; ///< user correction factor for lumi (e.g. normalization, efficiency correction etc.)
 
-  float mTimeExclude = 0; //!
+  float mTimeExclude = 0;                       //!
   bool mExcludeComp[3] = {false, false, false}; //!
   /// Correction of (x,u,v) with tricubic interpolator on a regular grid
   TPCSlowSpaceChargeCorrection* mCorrectionSlow{nullptr}; ///< reference space charge corrections
