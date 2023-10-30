@@ -130,13 +130,17 @@ void PrimaryVertexingSpec::run(ProcessingContext& pc)
       recoData.fillTrackMCLabels(gids, tracksMCInfo);
     }
     mVertexer.setStartIR(recoData.startIR);
-    std::vector<o2::InteractionRecord> ft0Data;
+    static std::vector<InteractionCandidate> ft0Data;
     if (mValidateWithIR) { // select BCs for validation
+      ft0Data.clear();
       const o2::ft0::InteractionTag& ft0Params = o2::ft0::InteractionTag::Instance();
       auto ft0all = recoData.getFT0RecPoints();
       for (const auto& ftRP : ft0all) {
         if (ft0Params.isSelected(ftRP)) {
-          ft0Data.push_back(ftRP.getInteractionRecord());
+          ft0Data.emplace_back(InteractionCandidate{ftRP.getInteractionRecord(),
+                                                    ftRP.getInteractionRecord().differenceInBC(recoData.startIR) * o2::constants::lhc::LHCBunchSpacingMUS,
+                                                    ftRP.getTrigger().getAmplA() + ftRP.getTrigger().getAmplC(),
+                                                    GTrackID::FT0});
         }
       }
     }

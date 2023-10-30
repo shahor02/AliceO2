@@ -59,7 +59,7 @@ class PVertexer
   void init();
   void end();
   template <typename TR>
-  int process(const TR& tracks, const gsl::span<o2d::GlobalTrackID> gids, const gsl::span<o2::InteractionRecord> bcData,
+  int process(const TR& tracks, const gsl::span<o2d::GlobalTrackID> gids, const gsl::span<InteractionCandidate> intCand,
               std::vector<PVertex>& vertices, std::vector<o2d::VtxTrackIndex>& vertexTrackIDs, std::vector<V2TRef>& v2tRefs,
               const gsl::span<const o2::MCCompLabel> lblTracks, std::vector<o2::MCEventLabel>& lblVtx);
 
@@ -129,7 +129,7 @@ class PVertexer
   static constexpr int DBS_UNDEF = -2, DBS_NOISE = -1, DBS_INCHECK = -10;
 
   SeedHistoTZ buildHistoTZ(const VertexingInput& input);
-  int runVertexing(gsl::span<o2d::GlobalTrackID> gids, const gsl::span<o2::InteractionRecord> bcData,
+  int runVertexing(gsl::span<o2d::GlobalTrackID> gids, const gsl::span<InteractionCandidate> intCand,
                    std::vector<PVertex>& vertices, std::vector<o2d::VtxTrackIndex>& vertexTrackIDs, std::vector<V2TRef>& v2tRefs,
                    gsl::span<const o2::MCCompLabel> lblTracks, std::vector<o2::MCEventLabel>& lblVtx);
   void createMCLabels(gsl::span<const o2::MCCompLabel> lblTracks, const std::vector<uint32_t>& trackIDs, const std::vector<V2TRef>& v2tRefs, std::vector<o2::MCEventLabel>& lblVtx);
@@ -147,6 +147,8 @@ class PVertexer
   bool relateTrackToMeanVertex(o2::track::TrackParCov& trc, float vtxErr2);
   bool relateTrackToVertex(o2::track::TrackParCov& trc, const o2d::VertexBase& vtxSeed) const;
   void applyTMADSelection(std::vector<PVertex>& vertices, std::vector<int>& timeSort, const std::vector<V2TRef>& v2tRefs, const std::vector<uint32_t>& trackIDs);
+  void applITSOnlyFractionCut(std::vector<PVertex>& vertices, std::vector<int>& timeSort, const std::vector<V2TRef>& v2tRefs, const std::vector<uint32_t>& trackIDs);
+  void applInteractionValidation(std::vector<PVertex>& vertices, std::vector<int>& timeSort, const gsl::span<InteractionCandidate> intCand, int minContrib);
 
   template <typename TR>
   void createTracksPool(const TR& tracks, gsl::span<const o2d::GlobalTrackID> gids);
@@ -154,7 +156,7 @@ class PVertexer
   int findVertices(const VertexingInput& input, std::vector<PVertex>& vertices, std::vector<uint32_t>& trackIDs, std::vector<V2TRef>& v2tRefs);
   void reAttach(std::vector<PVertex>& vertices, std::vector<int>& timeSort, std::vector<uint32_t>& trackIDs, std::vector<V2TRef>& v2tRefs);
 
-  std::pair<int, int> getBestIR(const PVertex& vtx, const gsl::span<o2::InteractionRecord> bcData, int& currEntry) const;
+  std::pair<int, int> getBestIR(const PVertex& vtx, const gsl::span<InteractionCandidate> intCand, int& currEntry) const;
 
   int dbscan_RangeQuery(int idxs, std::vector<int>& cand, std::vector<int>& status);
   void dbscan_clusterize();
@@ -176,7 +178,7 @@ class PVertexer
   float mBz = 0.;                           ///< mag.field at beam line
   float mDBScanDeltaT = 0.;                 ///< deltaT cut for DBScan check
   float mDBSMaxZ2InvCorePoint = 0;          ///< inverse of max sigZ^2 of the track which can be core point in the DBScan
-  bool mValidateWithIR = false;             ///< require vertex validation with InteractionRecords (if available)
+  bool mValidateWithIR = false;             ///< require vertex validation with InteractionCandidates (if available)
 
   o2::InteractionRecord mStartIR{0, 0}; ///< IR corresponding to the start of the TF
 
@@ -294,12 +296,12 @@ void PVertexer::createTracksPool(const TR& tracks, gsl::span<const o2d::GlobalTr
 
 //___________________________________________________________________
 template <typename TR>
-int PVertexer::process(const TR& tracks, const gsl::span<o2d::GlobalTrackID> gids, const gsl::span<o2::InteractionRecord> bcData,
+int PVertexer::process(const TR& tracks, const gsl::span<o2d::GlobalTrackID> gids, const gsl::span<InteractionCandidate> intCand,
                        std::vector<PVertex>& vertices, std::vector<o2d::VtxTrackIndex>& vertexTrackIDs, std::vector<V2TRef>& v2tRefs,
                        const gsl::span<const o2::MCCompLabel> lblTracks, std::vector<o2::MCEventLabel>& lblVtx)
 {
   createTracksPool(tracks, gids);
-  return runVertexing(gids, bcData, vertices, vertexTrackIDs, v2tRefs, lblTracks, lblVtx);
+  return runVertexing(gids, intCand, vertices, vertexTrackIDs, v2tRefs, lblTracks, lblVtx);
 }
 
 //___________________________________________________________________

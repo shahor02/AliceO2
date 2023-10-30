@@ -64,8 +64,11 @@ struct PVertexerParams : public o2::conf::ConfigurableParamHelper<PVertexerParam
   float slowConvergenceFactor = 0.5; ///< consider convergence as slow if ratio new/old scale2 exceeds it
 
   // cleanup
+  bool applyInitialIRValidation = true;    ///< apply preliminary validation with IR before debris reduction / reattachment // RSS
   bool applyDebrisReduction = true;        ///< apply algorithm reducing split vertices
   bool applyReattachment = true;           ///< refit vertices reattaching tracks to closest found vertex
+  int minNContributorsForIRcutIni = 3;     ///< min multiplicity to reject if applyInitialIRValidation is requested and no matching interaction found // RSS
+
   float timeMarginReattach = 1.;           ///< safety marging for track time vs vertex time difference during reattachment
   float maxTDiffDebris = 7.0;              ///< when reducing debris, don't consider vertices separated by time > this value in \mus
   float maxZDiffDebris = 1.0;              ///< don't consider vertices separated by Z > this value in cm
@@ -73,6 +76,8 @@ struct PVertexerParams : public o2::conf::ConfigurableParamHelper<PVertexerParam
   float maxChi2TZDebris = 2000.;           ///< don't consider vertices with mutual chi2 exceeding this (for pp should be ~10)
   float addTimeSigma2Debris = 0.05 * 0.05; ///< increment time error^2 by this amount when calculating vertex-to-vertex chi2
   float addZSigma2Debris = 0.005 * 0.005;  ///< increment z error^2 by this amount when calculating vertex-to-vertex chi2
+  float maxITSOnlyFraction = 0.85;         ///< max ITS-only tracks fraction to accept
+  float minITSOnlyFraction = 0.0;          ///< min ITS-only tracks fraction to accept
   //
   // tMAD clean up
   float maxTMAD = -1.;   ///< max accepted tMAD, not tMAD cleanup if negative
