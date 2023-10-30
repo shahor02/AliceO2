@@ -138,8 +138,8 @@ void PrimaryVertexingSpec::run(ProcessingContext& pc)
       for (const auto& ftRP : ft0all) {
         if (ft0Params.isSelected(ftRP)) {
           ft0Data.emplace_back(InteractionCandidate{ftRP.getInteractionRecord(),
-                                                    ftRP.getInteractionRecord().differenceInBC(recoData.startIR) * o2::constants::lhc::LHCBunchSpacingMUS,
-                                                    ftRP.getTrigger().getAmplA() + ftRP.getTrigger().getAmplC(),
+                                                    float(ftRP.getInteractionRecord().differenceInBC(recoData.startIR) * o2::constants::lhc::LHCBunchSpacingMUS),
+                                                    float(ftRP.getTrigger().getAmplA() + ftRP.getTrigger().getAmplC()),
                                                     GTrackID::FT0});
         }
       }
