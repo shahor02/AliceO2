@@ -142,8 +142,8 @@ int PVertexer::runVertexing(const gsl::span<o2d::GlobalTrackID> gids, const gsl:
       if (i < 0) {
         n++;
       }
-      LOGP(info, "After Reattach: {} of {}", n, vtTimeSortID.size());
     }
+    LOGP(info, "After Reattach: {} of {}", n, vtTimeSortID.size());
   }
 
   if (lblTracks.size()) { // at this stage labels are needed just for the debug output
@@ -606,7 +606,7 @@ void PVertexer::applyTMADSelection(std::vector<PVertex>& vertices, std::vector<i
     float tmad = o2::math_utils::MAD2Sigma(dtvec.size(), dtvec.data()) + mPVParams->slopeTMAD * dtvec.size();
     if (tmad > mPVParams->maxTMAD || tmad < mPVParams->minTMAD) {
       timeSort[ivt] = -1; // disable vertex
-      LOGP(info, "Killing vertex {} with MAD {}, {} of {} killed", iv, tmad, ++nkill, nv);
+      LOGP(debug, "Killing vertex {} with MAD {}, {} of {} killed", iv, tmad, ++nkill, nv);
     }
   }
 }
@@ -643,18 +643,7 @@ void PVertexer::applInteractionValidation(std::vector<PVertex>& vertices, std::v
 {
   // get max error
   int nv = timeSort.size(), nkill = 0;
-  float maxErr = 0;
-  for (int ivt = 0; ivt < nv; ivt++) {
-    int iv = timeSort[ivt];
-    if (iv < 0) { // already rejected?
-      continue;
-    }
-    const auto& pv = vertices[iv];
-    if (maxErr < pv.getTimeStamp().getTimeStampError()) {
-      maxErr = pv.getTimeStamp().getTimeStampError();
-    }
-  }
-  maxErr *= mPVParams->nSigmaTimeCut;
+  float maxErr = std::max(mPVParams->minTError, mPVParams->nSigmaTimeCut * mPVParams->maxTError) + mPVParams->timeMarginVertexTime;
 
   int intCandMin = 0, nInt = intCand.size();
   for (int ivt = 0; ivt < nv; ivt++) {
@@ -670,8 +659,13 @@ void PVertexer::applInteractionValidation(std::vector<PVertex>& vertices, std::v
     float bestDf = 1e12;
     while (i < nInt) {
       float tv = pv.getTimeStamp().getTimeStamp() + mPVParams->timeBiasMS;
-      if (intCand[i].time > (tv + maxErr)) {
+      float tvE = std::max(mPVParams->minTError, mPVParams->nSigmaTimeCut * std::min(mPVParams->maxTError, pv.getTimeStamp().getTimeStampError())) + mPVParams->timeMarginVertexTime;
+      if (intCand[i].time > (tv + tvE)) {
         break;
+      }
+      if (intCand[i].time < (tv - tvE)) {
+        i++;
+        continue;
       }
       nCompatible++;
       auto dfa = std::abs(tv - intCand[intCandMin].time);
@@ -756,6 +750,7 @@ void PVertexer::reduceDebris(std::vector<PVertex>& vertices, std::vector<int>& t
   };
 
   // check
+  /* // RSS
   for (int im = 0; im < nv; im++) {
     int it = multSort[im];
     if (timeSort[it] < 0) {
@@ -764,7 +759,7 @@ void PVertexer::reduceDebris(std::vector<PVertex>& vertices, std::vector<int>& t
       LOGP(info, "mid#{:4d} vid:{:+4d} | N={} T={}", it, timeSort[it], vertices[timeSort[it]].getNContributors(), vertices[timeSort[it]].getTimeStamp().getTimeStamp());
     }
   }
-
+  */
   for (int im = 0; im < nv; im++) { // loop from highest multiplicity to lowest one
     int it = multSort[im];
     if (timeSort[it] < 0) { // if <0, the vertex was already discarded

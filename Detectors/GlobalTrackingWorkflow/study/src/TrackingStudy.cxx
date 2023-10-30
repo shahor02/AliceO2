@@ -128,6 +128,7 @@ void TrackingStudySpec::process(o2::globaltracking::RecoContainer& recoData)
   std::vector<o2::dataformats::PrimaryVertexExt> pveVec;
   float tBiasITS = o2::itsmft::DPLAlpideParam<o2::detectors::DetID::ITS>::Instance().roFrameBiasInBC * o2::constants::lhc::LHCBunchSpacingMUS;
   std::vector<float> dtvec, dzvec;
+  const o2::ft0::InteractionTag& ft0Params = o2::ft0::InteractionTag::Instance();
 
   for (int iv = 0; iv < nv; iv++) {
     LOGP(debug, "processing PV {} of {}", iv, nv);
@@ -145,7 +146,7 @@ void TrackingStudySpec::process(o2::globaltracking::RecoContainer& recoData)
     if (mTracksSrc[GTrackID::FT0]) {
       for (int ift0 = vtref.getFirstEntryOfSource(GTrackID::FT0); ift0 < vtref.getFirstEntryOfSource(GTrackID::FT0) + vtref.getEntriesOfSource(GTrackID::FT0); ift0++) {
         const auto& ft0 = FITInfo[trackIndex[ift0]];
-        if (ft0.isValidTime(o2::ft0::RecPoints::TimeMean) && ft0.getTrigger().getAmplA() + ft0.getTrigger().getAmplC() > 20) {
+        if (ft0Params.isSelected(ft0)) {
           auto fitTime = ft0.getInteractionRecord().differenceInBCMUS(recoData.startIR);
           if (std::abs(fitTime - pv.getTimeStamp().getTimeStamp()) < bestTimeDiff) {
             bestTimeDiff = fitTime - pv.getTimeStamp().getTimeStamp();
