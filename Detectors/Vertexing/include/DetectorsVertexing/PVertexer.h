@@ -199,6 +199,11 @@ class PVertexer
   size_t mNTZClustersIni = 0;
   size_t mTotTrials = 0;
   size_t mMaxTrialPerCluster = 0;
+  float mMaxTDiffDebris = 0;      ///< when reducing debris, don't consider vertices separated by time > this value in \mus
+  float mMaxTDiffDebrisExtra = 0; ///< when reducing debris, don't consider vertices separated by time > this value in \mus (optional additional cut
+  float mMaxTDiffDebrisFiducial = 0;
+  float mMaxZDiffDebrisFiducial = 0;
+  float mMaxMultRatDebrisFiducial = 0;
   long mLongestClusterTimeMS = 0;
   int mLongestClusterMult = 0;
   bool mPoolDumpProduced = false;

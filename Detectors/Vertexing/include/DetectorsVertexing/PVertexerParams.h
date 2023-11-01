@@ -45,6 +45,7 @@ struct PVertexerParams : public o2::conf::ConfigurableParamHelper<PVertexerParam
   float pullIniCut = 9;     ///< cut on pull (n^2 sigma) on dca to mean vertex
   float maxTimeErrorMUS = 10.0; ///< max time error in ms of the track to account
   float trackMaxX = 5.;         ///< lowest updtate point must be below this X
+  int minIBHits = 1.;           ///< min number of IB hits
 
   // histogramming and its weigths params
   float histoBinZSize = 0.05;       ///< size of the seedTZ histo bin Z
@@ -70,12 +71,22 @@ struct PVertexerParams : public o2::conf::ConfigurableParamHelper<PVertexerParam
   int minNContributorsForIRcutIni = 3;     ///< min multiplicity to reject if applyInitialIRValidation is requested and no matching interaction found // RSS
 
   float timeMarginReattach = 1.;           ///< safety marging for track time vs vertex time difference during reattachment
-  float maxTDiffDebris = 7.0;              ///< when reducing debris, don't consider vertices separated by time > this value in \mus
+
+  float maxTDiffDebris = 7.0;              ///< when reducing debris, don't consider vertices separated by time > this value in \mus if >0, if <0: mult factor to ITS ROF
   float maxZDiffDebris = 1.0;              ///< don't consider vertices separated by Z > this value in cm
   float maxMultRatDebris = 0.05;           ///< don't consider vertices with multiplicity ratio above this
   float maxChi2TZDebris = 2000.;           ///< don't consider vertices with mutual chi2 exceeding this (for pp should be ~10)
   float addTimeSigma2Debris = 0.05 * 0.05; ///< increment time error^2 by this amount when calculating vertex-to-vertex chi2
   float addZSigma2Debris = 0.005 * 0.005;  ///< increment z error^2 by this amount when calculating vertex-to-vertex chi2
+
+  // extra debris reduction cut, ignored if maxTDiffDebrisExtra == 0. The maxTDiffDebrisExtra must not exceed maxTDiffDebris
+  float maxTDiffDebrisExtra = 0;                ///< when reducing debris, don't consider vertices separated by time > this value in \mus if >0, if <0: mult factor to ITS ROF
+  float maxZDiffDebrisExtra = 1.0;              ///< don't consider vertices separated by Z > this value in cm
+  float maxMultRatDebrisExtra = 0.05;           ///< don't consider vertices with multiplicity ratio above this
+  float maxChi2TZDebrisExtra = 2000.;           ///< don't consider vertices with mutual chi2 exceeding this (for pp should be ~10)
+  float addTimeSigma2DebrisExtra = 0.05 * 0.05; ///< increment time error^2 by this amount when calculating vertex-to-vertex chi2
+  float addZSigma2DebrisExtra = 0.005 * 0.005;  ///< increment z error^2 by this amount when calculating vertex-to-vertex chi2
+
   float maxITSOnlyFraction = 0.85;         ///< max ITS-only tracks fraction to accept
   float minITSOnlyFraction = 0.0;          ///< min ITS-only tracks fraction to accept
   //

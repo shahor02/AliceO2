@@ -703,37 +703,29 @@ void PVertexer::reduceDebris(std::vector<PVertex>& vertices, std::vector<int>& t
   auto checkPair = [&vertices, &timeSort, &lblVtx, this](int i, int j) {
     auto &vtI = vertices[timeSort[i]], &vtJ = vertices[timeSort[j]];
     auto tDiff = std::abs(vtI.getTimeStamp().getTimeStamp() - vtJ.getTimeStamp().getTimeStamp());
-    if (tDiff > this->mPVParams->maxTDiffDebris) {
+
+    if (tDiff > this->mMaxTDiffDebrisFiducial) {
       return true; // don't continue checking other neighbours in time
     }
     if (vtI.getNContributors() < vtJ.getNContributors()) {
       return false; // comparison goes from higher to lower mult vtx
     }
-    bool rej = true;
+    bool rej = false;
     float zDiff = std::abs(vtI.getZ() - vtJ.getZ());
-    if (zDiff > this->mPVParams->maxZDiffDebris) { // cannot be reduced as too far in Z
-#ifndef _PV_DEBUG_TREE_
-      return false;
-#endif
-      rej = false;
+    if (zDiff < this->mMaxZDiffDebrisFiducial && float(vtJ.getNContributors() < float(vtI.getNContributors()) * this->mMaxMultRatDebrisFiducial)) {
+      if (this->mMaxTDiffDebrisExtra <= 0 || // if no extra cut requested, no need to recheck the differences
+          (zDiff < this->mPVParams->maxZDiffDebris && tDiff < this->mMaxTDiffDebris && float(vtJ.getNContributors()) < float(vtI.getNContributors()) * this->mPVParams->maxMultRatDebris)) {
+        float chi2z = zDiff * zDiff / (vtI.getSigmaZ2() + vtJ.getSigmaZ2() + this->mPVParams->addZSigma2Debris);
+        float chi2t = tDiff * tDiff / (vtI.getTimeStamp().getTimeStampError2() + vtJ.getTimeStamp().getTimeStampError2() + this->mPVParams->addTimeSigma2Debris);
+        rej = (chi2z + chi2t) < this->mPVParams->maxChi2TZDebris;
+      }
+      if (!rej && this->mMaxTDiffDebrisExtra > 0 &&
+          (zDiff < this->mPVParams->maxZDiffDebrisExtra && tDiff < this->mMaxTDiffDebrisExtra && float(vtJ.getNContributors()) < float(vtI.getNContributors()) * this->mPVParams->maxMultRatDebrisExtra)) {
+        float chi2z = zDiff * zDiff / (vtI.getSigmaZ2() + vtJ.getSigmaZ2() + this->mPVParams->addZSigma2DebrisExtra);
+        float chi2t = tDiff * tDiff / (vtI.getTimeStamp().getTimeStampError2() + vtJ.getTimeStamp().getTimeStampError2() + this->mPVParams->addTimeSigma2DebrisExtra);
+        rej = (chi2z + chi2t) < this->mPVParams->maxChi2TZDebrisExtra;
+      }
     }
-    float multRat = float(vtJ.getNContributors()) / float(vtI.getNContributors());
-    if (multRat > this->mPVParams->maxMultRatDebris) {
-#ifndef _PV_DEBUG_TREE_
-      return false;
-#endif
-      rej = false;
-    }
-    float tiE = vtI.getTimeStamp().getTimeStampError(), tjE = vtJ.getTimeStamp().getTimeStampError();
-    float chi2z = zDiff * zDiff / (vtI.getSigmaZ2() + vtJ.getSigmaZ2() + this->mPVParams->addZSigma2Debris);
-    float chi2t = tDiff * tDiff / (tiE * tiE + tjE * tjE + this->mPVParams->addTimeSigma2Debris);
-    if (chi2z + chi2t > this->mPVParams->maxChi2TZDebris) {
-#ifndef _PV_DEBUG_TREE_
-      return false;
-#endif
-      rej = false;
-    }
-    // all veto cuts passed, declare as fake!
 #ifdef _PV_DEBUG_TREE_
     o2::MCEventLabel dummyLbl;
     this->mDebugDumpPVComp.emplace_back(PVtxCompDump{vtI, vtJ, chi2z, chi2t, rej});
@@ -840,6 +832,12 @@ void PVertexer::init()
   setBz(prop->getNominalBz());
   mDBScanDeltaT = mPVParams->dbscanDeltaT > 0.f ? mPVParams->dbscanDeltaT : mITSROFrameLengthMUS - mPVParams->dbscanDeltaT;
   mDBSMaxZ2InvCorePoint = mPVParams->dbscanMaxSigZCorPoint > 0 ? 1. / (mPVParams->dbscanMaxSigZCorPoint * mPVParams->dbscanMaxSigZCorPoint) : 1e6;
+
+  mMaxTDiffDebris = mPVParams->maxTDiffDebris < 0 ? mITSROFrameLengthMUS * (-mPVParams->maxTDiffDebris) : mPVParams->maxTDiffDebris;
+  mMaxTDiffDebrisExtra = mPVParams->maxTDiffDebrisExtra == 0 ? -1 : (mPVParams->maxTDiffDebrisExtra < 0 ? mITSROFrameLengthMUS * (-mPVParams->maxTDiffDebrisExtra) : mPVParams->maxTDiffDebrisExtra);
+  mMaxTDiffDebrisFiducial = mMaxTDiffDebrisExtra > 0 ? std::max(mMaxTDiffDebrisExtra, mMaxTDiffDebris) : mMaxTDiffDebris;
+  mMaxZDiffDebrisFiducial = mMaxTDiffDebrisExtra > 0 ? std::max(mPVParams->maxZDiffDebrisExtra, mPVParams->maxZDiffDebris) : mPVParams->maxZDiffDebris;
+  mMaxMultRatDebrisFiducial = mMaxTDiffDebrisExtra > 0 ? std::max(mPVParams->maxMultRatDebrisExtra, mPVParams->maxMultRatDebris) : mPVParams->maxMultRatDebris;
 
 #ifdef _PV_DEBUG_TREE_
   mDebugDumpFile = std::make_unique<TFile>("pvtxDebug.root", "recreate");

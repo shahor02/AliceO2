@@ -103,13 +103,18 @@ void PrimaryVertexingSpec::run(ProcessingContext& pc)
     std::vector<o2d::GlobalTrackID> gids;
     auto maxTrackTimeError = PVertexerParams::Instance().maxTimeErrorMUS;
     auto trackMaxX = PVertexerParams::Instance().trackMaxX;
+    auto minIBHits = PVertexerParams::Instance().minIBHits;
     auto halfROFITS = 0.5 * mITSROFrameLengthMUS + mITSROFBiasMUS;
     auto hw2ErrITS = 2.f / std::sqrt(12.f) * mITSROFrameLengthMUS; // conversion from half-width to error for ITS
 
-    auto creator = [maxTrackTimeError, hw2ErrITS, halfROFITS, trackMaxX, &tracks, &gids](auto& _tr, GTrackID _origID, float t0, float terr) {
+    auto creator = [maxTrackTimeError, hw2ErrITS, halfROFITS, trackMaxX, minIBHits, &tracks, &gids, &recoData](auto& _tr, GTrackID _origID, float t0, float terr) {
       if constexpr (isBarrelTrack<decltype(_tr)>()) {
         if (!_origID.includesDet(DetID::ITS) || _tr.getX() > trackMaxX) {
           return true; // just in case this selection was not done on RecoContainer filling level
+        }
+        auto itsID = recoData.getITSContributorGID(_origID);
+        if (!itsID.isSourceSet() || o2::math_utils::numberOfBitsSet(recoData.getITSTrack(itsID).getPattern() & 7) < minIBHits) {
+          return true;
         }
         if constexpr (isITSTrack<decltype(_tr)>()) {
           t0 += halfROFITS;  // ITS time is supplied in \mus as beginning of ROF
