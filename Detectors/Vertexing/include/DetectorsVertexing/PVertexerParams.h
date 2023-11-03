@@ -87,8 +87,8 @@ struct PVertexerParams : public o2::conf::ConfigurableParamHelper<PVertexerParam
   float addTimeSigma2DebrisExtra = 0.05 * 0.05; ///< increment time error^2 by this amount when calculating vertex-to-vertex chi2
   float addZSigma2DebrisExtra = 0.005 * 0.005;  ///< increment z error^2 by this amount when calculating vertex-to-vertex chi2
 
-  float maxITSOnlyFraction = 0.85;         ///< max ITS-only tracks fraction to accept
-  float minITSOnlyFraction = 0.0;          ///< min ITS-only tracks fraction to accept
+  float maxITSOnlyFraction = 0.85; ///< max ITS-only tracks fraction to accept
+  float minITSOnlyFraction = 0.0;  ///< min ITS-only tracks fraction to accept
   //
   // tMAD clean up
   float maxTMAD = -1.;   ///< max accepted tMAD, not tMAD cleanup if negative
