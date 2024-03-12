@@ -125,9 +125,11 @@ void GRPDCSDPsDataProcessor::run(o2::framework::ProcessingContext& pc)
   mLHCIFupdated = false;
   TStopwatch sw;
   auto startValidity = (long)(pc.services().get<o2::framework::TimingInfo>().creation);
-  auto dps = pc.inputs().get<gsl::span<DPCOM>>("input");
+  //  auto dps = pc.inputs().get<gsl::span<DPCOM>>("input");
+  gsl::span<DPCOM> dps{};
+  usleep(1000);
   auto timeNow = HighResClock::now();
-  if (startValidity == 0xffffffffffffffff) {                                                                   // it means it is not set
+  if (startValidity == 0xffffffffffffffff || startValidity<0) {                                                                   // it means it is not set
     startValidity = std::chrono::duration_cast<std::chrono::milliseconds>(timeNow.time_since_epoch()).count(); // in ms
   }
   mProcessor->setStartValidityMagFi(startValidity);
@@ -297,7 +299,8 @@ DataProcessorSpec getGRPDCSDPsDataProcessorSpec()
 
   return DataProcessorSpec{
     "grp-dcs-data-processor",
-    Inputs{{"input", "DCS", "GRPDATAPOINTS"}},
+    //    Inputs{{"input", "DCS", "GRPDATAPOINTS"}},
+    {},
     outputs,
     AlgorithmSpec{adaptFromTask<o2::grp::GRPDCSDPsDataProcessor>()},
     Options{{"ccdb-path", VariantType::String, "http://localhost:8080", {"Path to CCDB"}},
