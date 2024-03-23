@@ -150,24 +150,24 @@ void SVStudySpec::process(o2::globaltracking::RecoContainer& recoData)
       // get ITS tracks, if any
       nclITS[ip] = itsPatt[ip] = 0;
       if (gid.includesDet(DetID::ITS)) {
-	auto gidITS = recoData.getITSContributorGID(gid);
-	if (gidITS.getSource() == GTrackID::ITS) {
-	  const auto& itsTr = recoData.getITSTrack(recoData.getITSContributorGID(gid));
-	  nclITS[ip] = itsTr.getNClusters();
-	  for (int il = 0; il < 7; il++) {
-	    if (itsTr.hasHitOnLayer(il)) {
-	      itsPatt[ip] |= 0x1 << il;
-	    }
-	  }
-	} else {
-	  const auto& itsTrf = recoData.getITSABRefs()[gidITS];
-	  nclITS[ip] = itsTrf.getNClusters();
-	  for (int il = 0; il < 7; il++) {
-	    if (itsTrf.hasHitOnLayer(il)) {
-	      itsPatt[ip] |= 0x1 << il;
-	    }
-	  }
-	}
+        auto gidITS = recoData.getITSContributorGID(gid);
+        if (gidITS.getSource() == GTrackID::ITS) {
+          const auto& itsTr = recoData.getITSTrack(recoData.getITSContributorGID(gid));
+          nclITS[ip] = itsTr.getNClusters();
+          for (int il = 0; il < 7; il++) {
+            if (itsTr.hasHitOnLayer(il)) {
+              itsPatt[ip] |= 0x1 << il;
+            }
+          }
+        } else {
+          const auto& itsTrf = recoData.getITSABRefs()[gidITS];
+          nclITS[ip] = itsTrf.getNClusters();
+          for (int il = 0; il < 7; il++) {
+            if (itsTrf.hasHitOnLayer(il)) {
+              itsPatt[ip] |= 0x1 << il;
+            }
+          }
+        }
       }
     }
     (*mDBGOut) << "tfinfo"
