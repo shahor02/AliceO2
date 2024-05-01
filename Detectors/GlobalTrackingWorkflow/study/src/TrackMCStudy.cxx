@@ -256,7 +256,7 @@ void TrackMCStudy::process(o2::globaltracking::RecoContainer& recoData)
       const auto& mcPartPar = (*mcTracks)[parID];
       pdgParent = mcPartPar.GetPdgCode();
     }
-    auto& vgids = ent.second;
+    auto& vgids = ent.second; // <vtxID, indices of tracks for this label>
     // make sure the more global tracks come 1st
     if (vgids.size() > 1) {
       std::sort(vgids.begin(), vgids.end(), [](VTIndexV& lhs, VTIndexV& rhs) { return lhs.second.getSource() > rhs.second.getSource(); });
@@ -272,10 +272,10 @@ void TrackMCStudy::process(o2::globaltracking::RecoContainer& recoData)
     int entITS = -1, entTPC = -1, entITSTPC = -1;
     for (size_t i = 0; i < vgids.size(); i++) {
       auto vid = vgids[i].second;
-      auto lbl = recoData.getTrackMCLabel(vid);
+      auto lblLoc = recoData.getTrackMCLabel(vid);
       const auto& trc = recoData.getTrackParam(vid);
       if (mVerbose > 1) {
-        LOGP(info, "       :{} {:22} | [{}] {}", lbl.asString(), vid.asString(), i, ((const o2::track::TrackPar&)trc).asString());
+        LOGP(info, "       :{} {:22} | [{}] {}", lblLoc.asString(), vid.asString(), i, ((const o2::track::TrackPar&)trc).asString());
       }
       recTracks.push_back(trc);
       recGIDs.push_back(vid);
