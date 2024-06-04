@@ -99,6 +99,8 @@ AddOptionRTC(trackMergerFactor2K, float, 2.0f * 2.0f, "", 0, "factor2K for track
 AddOptionRTC(trackMergerFactor2General, float, 3.5f * 3.5f, "", 0, "General factor for track merging")
 AddOptionRTC(rejectEdgeClustersMargin, float, 0.f, "", 0, "Margin in cm of Y position when rejecting edge clusters based on uncorrected track Y")
 AddOptionRTC(rejectEdgeClustersSigmaMargin, float, 0.f, "", 0, "Margin factor for trackSigmaY when rejecting edge clusters based on uncorrected track Y")
+AddOptionRTC(trackletMaxSharedFraction, float, 0.1f, "", 0, "Max fraction of shared clusters for tracklet")
+AddOptionRTC(trackletMinSharedNormFactor, float, 0.f, "", 0, "Max shared defined as trackletMinSharedNormFactor*max(current_nhits,trackletMinSharedNormFactor*minHits,1)")
 AddOptionRTC(maxTimeBinAboveThresholdIn1000Bin, unsigned short, 500, "", 0, "Except pad from cluster finding if total number of charges in a fragment is above this baseline (disable = 0)")
 AddOptionRTC(maxConsecTimeBinAboveThreshold, unsigned short, 200, "", 0, "Except pad from cluster finding if number of consecutive charges in a fragment is above this baseline (disable = 0)")
 AddOptionRTC(noisyPadSaturationThreshold, unsigned short, 700, "", 0, "Threshold where a timebin is considered saturated, disabling the noisy pad check for that pad")
@@ -151,6 +153,7 @@ AddOptionRTC(PID_useNsigma, char, 1, "", 0, "Use nSigma instead of absolute dist
 AddOptionRTC(adddEdxSubThresholdClusters, char, 1, "", 0, "Add sub threshold clusters in TPC dEdx computation")
 AddOptionRTC(rejectEdgeClustersInSeeding, char, 0, "", 0, "Reject edge clusters based on uncorrected track Y during seeding")
 AddOptionRTC(rejectEdgeClustersInTrackFit, char, 0, "", 0, "Reject edge clusters based on uncorrected track Y during track fit")
+AddOptionRTC(updateClusteWeights, char, 0, "", 0, "if 1: winner tracklet updates clusters of inferior weight by its own weight, destroyed tracklet nullyfies weights of clusters it strictly owns")
 AddOptionArray(PID_remap, char, 9, (0, 1, 2, 3, 4, 5, 6, 7, 8), "", 0, "Remap Ipid to PID_reamp[Ipid] (no remap if<0)") // BUG: CUDA cannot yet hand AddOptionArrayRTC
 AddHelp("help", 'h')
 EndConfig()
