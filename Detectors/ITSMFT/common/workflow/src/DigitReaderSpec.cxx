@@ -21,9 +21,10 @@
 #include "ITSMFTWorkflow/DigitReaderSpec.h"
 #include "SimulationDataFormat/MCCompLabel.h"
 #include "SimulationDataFormat/ConstMCTruthContainer.h"
-#include "SimulationDataFormat/IOMCTruthContainerView.h"
 #include "DataFormatsITSMFT/PhysTrigger.h"
 #include "CommonUtils/NameConf.h"
+#include "CommonDataFormat/IRFrame.h"
+#include "CommonUtils/IRFrameSelector.h"
 #include <cassert>
 
 using namespace o2::framework;
@@ -56,43 +57,102 @@ void DigitReader::init(InitContext& ic)
 {
   mFileName = o2::utils::Str::concat_string(o2::utils::Str::rectifyDirectory(ic.options().get<std::string>("input-dir")),
                                             ic.options().get<std::string>((mDetNameLC + "-digit-infile").c_str()));
+  if (ic.options().hasOption("ignore-irframes") && !ic.options().get<bool>("ignore-irframes")) {
+    mUseIRFrames = true;
+  }
   connectTree(mFileName);
 }
 
 void DigitReader::run(ProcessingContext& pc)
 {
-  auto ent = mTree->GetReadEntry() + 1;
-  assert(ent < mTree->GetEntries()); // this should not happen
-
-  o2::dataformats::IOMCTruthContainerView* plabels = nullptr;
-  if (mUseMC) {
+  const auto& tinfo = pc.services().get<o2::framework::TimingInfo>();
+  if (tinfo.globalRunNumberChanged) { // new run is starting: 1st call
+    // TODO: we have to find a way define CCDBInput for IRFrames mode only
+    if (mOrigin == o2::header::gDataOriginITS) {
+      const auto& alpideParam = o2::itsmft::DPLAlpideParam<o2::detectors::DetID::ITS>::Instance();
+      mROFBiasInBC = alpideParam.roFrameBiasInBC;
+      mROFLengthInBC = alpideParam.roFrameLengthInBC;
+    } else {
+      const auto& alpideParam = o2::itsmft::DPLAlpideParam<o2::detectors::DetID::MFT>::Instance();
+      mROFBiasInBC = alpideParam.roFrameBiasInBC;
+      mROFLengthInBC = alpideParam.roFrameLengthInBC;
+    }
+  }
+  gsl::span<o2::dataformats::IRFrame> irFrames{};
+  if (mUseIRFrames) {
+    irFrames = pc.inputs().get<gsl::span<o2::dataformats::IRFrame>>("driverInfo");
+  }
+  static o2::dataformats::IOMCTruthContainerView* plabels = nullptr;
+  if (mUseMC && !plabels) {
     mTree->SetBranchAddress(mDigtMCTruthBranchName.c_str(), &plabels);
   }
-  mTree->GetEntry(ent);
-  LOG(info) << mDetName << "DigitReader pushes " << mDigROFRec.size() << " ROFRecords, "
-            << mDigits.size() << " digits at entry " << ent;
+  auto ent = mTree->GetReadEntry();
 
-  // This is a very ugly way of providing DataDescription, which anyway does not need to contain detector name.
-  // To be fixed once the names-definition class is ready
-  pc.outputs().snapshot(Output{mOrigin, "DIGITSROF", 0}, mDigROFRec);
-  pc.outputs().snapshot(Output{mOrigin, "DIGITS", 0}, mDigits);
-  if (mUseCalib) {
-    pc.outputs().snapshot(Output{mOrigin, "GBTCALIB", 0}, mCalib);
-  }
-  if (mTriggerOut) {
-    std::vector<o2::itsmft::PhysTrigger> dummyTrig;
-    pc.outputs().snapshot(Output{mOrigin, "PHYSTRIG", 0}, dummyTrig);
-  }
-  if (mUseMC) {
-    auto& sharedlabels = pc.outputs().make<o2::dataformats::ConstMCTruthContainer<o2::MCCompLabel>>(Output{mOrigin, "DIGITSMCTR", 0});
-    plabels->copyandflatten(sharedlabels);
-    delete plabels;
-    pc.outputs().snapshot(Output{mOrigin, "DIGITSMC2ROF", 0}, mDigMC2ROFs);
-  }
+  if (!mUseIRFrames) {
+    ent++;
+    assert(ent < mTree->GetEntries()); // this should not happen
+    mTree->GetEntry(ent);
+    LOG(info) << mDetName << "DigitReader pushes " << mDigROFRec.size() << " ROFRecords, " << mDigits.size() << " digits at entry " << ent;
+    pc.outputs().snapshot(Output{mOrigin, "DIGITSROF", 0}, mDigROFRec);
+    pc.outputs().snapshot(Output{mOrigin, "DIGITS", 0}, mDigits);
+    if (mUseCalib) {
+      pc.outputs().snapshot(Output{mOrigin, "GBTCALIB", 0}, mCalib);
+    }
+    if (mTriggerOut) {
+      std::vector<o2::itsmft::PhysTrigger> dummyTrig;
+      pc.outputs().snapshot(Output{mOrigin, "PHYSTRIG", 0}, dummyTrig);
+    }
+    if (mUseMC) {
+      auto& sharedlabels = pc.outputs().make<o2::dataformats::ConstMCTruthContainer<o2::MCCompLabel>>(Output{mOrigin, "DIGITSMCTR", 0});
+      plabels->copyandflatten(sharedlabels);
+      delete plabels;
+      plabels = nullptr;
+      pc.outputs().snapshot(Output{mOrigin, "DIGITSMC2ROF", 0}, mDigMC2ROFs);
+    }
+    if (mTree->GetReadEntry() + 1 >= mTree->GetEntries()) {
+      pc.services().get<ControlService>().endOfStream();
+      pc.services().get<ControlService>().readyToQuit(QuitRequest::Me);
+    }
+  } else { // need to select particulars IRs range, presumably from the same tree entry
+    o2::utils::IRFrameSelector irfSel;
+    if (irFrames.size()) { // we assume the IRFrames are in the increasing order
+      if (ent < 0) {
+        ent++;
+      }
+      setSelectedIRFrames(irFrames, 0, 0, mROFBiasInBC, true);
+      const auto irMin = irFrames.front().getMin();
+      const auto irMax = irFrames.back().getMax();
+      while (mDigROFRec.size() && ent < mTree->GetEntries()) {
+        // do we need to read a new entry?
+        if (ent > mTree->GetReadEntry()) {
+          if (mUseMC) {
+            delete plabels;
+            plabels = nullptr;
+            mTree->SetBranchAddress(mDigtMCTruthBranchName.c_str(), &plabels);
+          }
+          mTree->GetEntry(ent);
+        }
 
-  if (mTree->GetReadEntry() + 1 >= mTree->GetEntries()) {
-    pc.services().get<ControlService>().endOfStream();
-    pc.services().get<ControlService>().readyToQuit(QuitRequest::Me);
+        if (mDigROFRec.front().getBCData() <= irMax && mDigROFRec.back().getBCData() >= irMin) { // there is an overlap
+          for (const auto& rof : mDigROFRec) {
+            if (irfSel.check({rof.getBCData(), rof.getBCData() + mROFLengthInBC - 1}) != -1) {
+              found = true;
+              // fill
+              break;
+            }
+          }
+        }
+        if (mDigROFRec.back().getBCData() < irMax) { // need to check the next entry
+          ent++;
+          continue;
+        }
+        break; // push collected data
+      }
+    }
+    if (!irFrames.size() || irFrames.back().isLast()) {
+      pc.services().get<ControlService>().endOfStream();
+      pc.services().get<ControlService>().readyToQuit(QuitRequest::Me);
+    }
   }
 }
 

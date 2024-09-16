@@ -57,6 +57,7 @@ install(FILES CheckDigits_mft.C
               CreateGRPMagFieldObject.C
               CreateGRPLHCIFObject.C
               getTimeStamp.C
+              CreateSampleIRFrames.C
         DESTINATION share/macro/)
 
 # FIXME: a lot of macros that are here should really be elsewhere. Those which
@@ -372,6 +373,12 @@ o2_add_test_root_macro(getTimeStamp.C
                        PUBLIC_LINK_LIBRARIES O2::CommonConstants
                                              O2::CCDB
                                              O2::CommonUtils)
+
+
+o2_add_test_root_macro(CreateSampleIRFrames.C
+                       PUBLIC_LINK_LIBRARIES O2::CommonUtils
+                                             O2::CommonDataFormat
+                                             O2::SimulationDataFormat)
 
 #
 # NOTE: commented out until unit testing reenabled FIXME : re-enable or delete ?

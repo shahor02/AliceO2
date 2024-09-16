@@ -27,6 +27,7 @@
 #include "Framework/CallbackService.h"
 #include "Framework/Logger.h"
 #include "Framework/DataProcessingHeader.h"
+#include <gsl/span>
 #include <TFile.h>
 #include <TGrid.h>
 
@@ -39,58 +40,53 @@ namespace o2f = o2::framework;
 /// (only those fields of HBFUtils which were not modified before, e.g. by ConfigurableParam::updateFromString)
 
 int HBFUtilsInitializer::NTFs = 0;
+long HBFUtilsInitializer::LastIRFrameIndex = -1;
+std::vector<o2::dataformats::IRFrame> HBFUtilsInitializer::IRFrames = {};
 
 //_________________________________________________________
 HBFUtilsInitializer::HBFUtilsInitializer(const o2f::ConfigContext& configcontext, o2f::WorkflowSpec& wf)
 {
   bool upstream = false; // timing info will be provided from upstream readers-driver, just subscribe to it
+  std::string rootFileInput{};
+  std::string hbfuInput{};
+  bool helpasked = configcontext.helpOnCommandLine(); // if help is asked, don't take for granted that the ini file is there, don't produce an error if it is not!
 
-  auto updateHBFUtils = [&configcontext, &upstream]() -> std::string {
+  auto updateHBFUtils = [&configcontext, &upstream, &hbfuInput, &rootFileInput]() {
     static bool done = false;
-    static std::string confTFInfo{};
     if (!done) {
-      bool helpasked = configcontext.helpOnCommandLine(); // if help is asked, don't take for granted that the ini file is there, don't produce an error if it is not!
       auto conf = configcontext.options().isSet(HBFConfOpt) ? configcontext.options().get<std::string>(HBFConfOpt) : "";
-      HBFOpt opt = HBFOpt::NONE;
-      upstream = false;
       if (!conf.empty()) {
         auto vopts = o2::utils::Str::tokenize(conf, ',');
         for (const auto& optStr : vopts) {
+          LOGP(info, "optStr={}", optStr);
           if (optStr == UpstreamOpt) {
             upstream = true;
             continue;
           }
-          if (!confTFInfo.empty()) {
-            throw std::runtime_error(fmt::format("too many options in {} {}", HBFConfOpt, conf));
-          }
-          opt = getOptType(optStr);
-          if ((opt == HBFOpt::INI || opt == HBFOpt::JSON) && (!(helpasked && !o2::conf::ConfigurableParam::configFileExists(confTFInfo)))) {
+          HBFOpt opt = getOptType(optStr);
+          if ((opt == HBFOpt::INI || opt == HBFOpt::JSON)) {
             o2::conf::ConfigurableParam::updateFromFile(optStr, "HBFUtils", true); // update only those values which were not touched yet (provenance == kCODE)
             const auto& hbfu = o2::raw::HBFUtils::Instance();
             hbfu.checkConsistency();
-            confTFInfo = HBFUSrc;
+            hbfuInput = optStr;
           } else if (opt == HBFOpt::HBFUTILS) {
             const auto& hbfu = o2::raw::HBFUtils::Instance();
             hbfu.checkConsistency();
-            confTFInfo = HBFUSrc;
+            hbfuInput = optStr;
           } else if (opt == HBFOpt::ROOT) {
-            confTFInfo = optStr;
+            rootFileInput = optStr;
           }
         }
       }
       done = true;
-      if (opt != HBFOpt::NONE) {
-        if (upstream) {
-          if (opt != HBFOpt::ROOT) {
-            throw std::runtime_error(fmt::format("invalid option {}: upstream can be used only with root file providing TFIDInfo", conf));
-          }
-        }
-      } else if (upstream) {
-        confTFInfo = "o2_tfidinfo.root";
-        LOGP(debug, "--hbfutils-config input type is not provided but upstream keyword is found: assume {}", confTFInfo);
+      /* RSS
+      if (upstream) {
+  if (rootFileInput.empty()) {
+    throw std::runtime_error(fmt::format("invalid option {}: upstream can be used only with root file providing TFIDInfo or IRFrames", conf));
+  }
       }
+      */
     }
-    return confTFInfo;
   };
 
   if (configcontext.options().hasOption("disable-root-input") && configcontext.options().get<bool>("disable-root-input")) {
@@ -99,12 +95,23 @@ HBFUtilsInitializer::HBFUtilsInitializer(const o2f::ConfigContext& configcontext
   const auto& hbfu = o2::raw::HBFUtils::Instance();
   for (auto& spec : wf) {
     if (spec.inputs.empty()) {
-      auto conf = updateHBFUtils();
+      updateHBFUtils();
+      LOGP(info, "UPSTR: {} hbfuInput: {} rootFileInput:{}", upstream, hbfuInput, rootFileInput);
       if (!upstream || spec.name == ReaderDriverDevice) {
-        o2f::ConfigParamsHelper::addOptionIfMissing(spec.options, o2f::ConfigParamSpec{HBFTFInfoOpt, o2f::VariantType::String, conf, {"root file with per-TF info"}});
+        if (!hbfuInput.empty()) { // MC timing coming from the HBFUtils configurable
+          o2f::ConfigParamsHelper::addOptionIfMissing(spec.options, o2f::ConfigParamSpec{HBFTFInfoOpt, o2f::VariantType::String, HBFUSrc, {"HBFUtils input"}});
+          if (!rootFileInput.empty() && spec.name == ReaderDriverDevice) { // this is IRFrame file passed to reader driver
+            o2f::ConfigParamsHelper::addOptionIfMissing(spec.options, o2f::ConfigParamSpec{HBFIRFrameOpt, o2f::VariantType::String, rootFileInput, {"root file with selected IR-frames"}});
+          }
+        } else {
+          o2f::ConfigParamsHelper::addOptionIfMissing(spec.options, o2f::ConfigParamSpec{HBFTFInfoOpt, o2f::VariantType::String, rootFileInput, {"root file with per-TF info"}});
+        }
         o2f::ConfigParamsHelper::addOptionIfMissing(spec.options, o2f::ConfigParamSpec{DelayOpt, o2f::VariantType::Float, 0.f, {"delay in seconds between consecutive TFs sending"}});
       } else { // subsribe to upstream timing info from readers-driver
         spec.inputs.emplace_back(o2f::InputSpec{"driverInfo", "GLO", "READER_DRIVER", 0, o2f::Lifetime::Timeframe});
+        if (!hbfuInput.empty() && !rootFileInput.empty()) { // flag that the READER_DRIVER is not dummy but contains IRFrames
+          o2f::ConfigParamsHelper::addOptionIfMissing(spec.options, o2f::ConfigParamSpec{IgnoreIRFramesOpt, o2f::VariantType::Bool, false, {"ignore IR-frames info"}});
+        }
       }
     }
   }
@@ -148,7 +155,24 @@ std::vector<o2::dataformats::TFIDInfo> HBFUtilsInitializer::readTFIDInfoVector(c
 }
 
 //_________________________________________________________
-void HBFUtilsInitializer::assignDataHeader(const std::vector<o2::dataformats::TFIDInfo>& tfinfoVec, o2::header::DataHeader& dh, o2::framework::DataProcessingHeader& dph)
+void HBFUtilsInitializer::readIRFramesVector(const std::string& fname)
+{
+  if (o2::utils::Str::beginsWith(fname, "alien://") && !gGrid && !TGrid::Connect("alien://")) {
+    LOGP(fatal, "could not open alien connection to read {}", fname);
+  }
+  std::unique_ptr<TFile> fl(TFile::Open(fname.c_str()));
+  auto vptr = (std::vector<o2::dataformats::IRFrame>*)fl->GetObjectChecked("irframes", "std::vector<o2::dataformats::IRFrame>");
+  if (!vptr) {
+    throw std::runtime_error(fmt::format("Failed to read irframes vector from {}", fname));
+  }
+  std::vector<o2::dataformats::IRFrame> v(*vptr);
+  NTFs = vptr->size();
+  LastIRFrameIndex = -1;
+  IRFrames.swap(*vptr);
+}
+
+//_________________________________________________________
+void HBFUtilsInitializer::assignDataHeaderFromTFIDInfo(const std::vector<o2::dataformats::TFIDInfo>& tfinfoVec, o2::header::DataHeader& dh, o2::framework::DataProcessingHeader& dph)
 {
   const auto tfinf = tfinfoVec[dh.tfCounter % tfinfoVec.size()];
   LOGP(debug, "Setting DH for {}/{} from tfCounter={} firstTForbit={} runNumber={} to tfCounter={} firstTForbit={} runNumber={}",
@@ -160,36 +184,92 @@ void HBFUtilsInitializer::assignDataHeader(const std::vector<o2::dataformats::TF
 }
 
 //_________________________________________________________
+void HBFUtilsInitializer::assignDataHeaderFromHBFUtils(o2::header::DataHeader& dh, o2::framework::DataProcessingHeader& dph)
+{
+  const auto& hbfu = o2::raw::HBFUtils::Instance();
+  auto offset = int64_t(hbfu.getFirstIRofTF({0, hbfu.orbitFirstSampled}).orbit);
+  dh.firstTForbit = offset + int64_t(hbfu.nHBFPerTF) * dh.tfCounter;
+  dh.runNumber = hbfu.runNumber;
+  dph.creation = hbfu.startTime + (dh.firstTForbit - hbfu.orbitFirst) * o2::constants::lhc::LHCOrbitMUS * 1.e-3;
+  LOGP(info, "SETTHING DH for {}/{} from tfCounter={} firstTForbit={} runNumber={}",
+       dh.dataOrigin.as<std::string>(), dh.dataDescription.as<std::string>(), dh.tfCounter, dh.firstTForbit, dh.runNumber);
+}
+
+//_________________________________________________________
+void HBFUtilsInitializer::assignDataHeaderFromHBFUtilWithIRFrames(o2::header::DataHeader& dh, o2::framework::DataProcessingHeader& dph)
+{
+  const auto& hbfu = o2::raw::HBFUtils::Instance();
+  static int64_t offset = int64_t(hbfu.getFirstIRofTF({0, hbfu.orbitFirstSampled}).orbit);
+  static uint32_t tfCounter = dh.tfCounter;
+  static uint32_t firstTForbit = offset + int64_t(hbfu.nHBFPerTF) * tfCounter;
+  // do we need to increment the tfCounter? Not if the next selected IRFrame still belongs to the previously sent TF
+  bool incrementTF = false;
+  if (LastIRFrameSplit) { // previously sent IRFrame ends in the next TF
+    LastIRFrameSplit = false;
+    incrementTF = true;
+  } else if (++LastIRFrameIndex < NTFs) {
+    auto tfc0 = std::max(tfCounter, hbfu.getTF(IRFrames[LastIRFrameIndex].getMin()));
+    auto tfc1 = std::max(tfCounter, hbfu.getTF(IRFrames[LastIRFrameIndex].getMax()));
+    if (tfc0 > tfCounter) {
+      tfCounter = tfc0;
+      firstTForbit = offset + int64_t(hbfu.nHBFPerTF) * tfCounter;
+    }
+    LastIRFrameSplit = tfc1 > tfCounter;
+  }
+  dh.tfCounter = tfCounter;
+  dh.firstTForbit = firstTForbit;
+  dh.runNumber = hbfu.runNumber;
+  dph.creation = hbfu.startTime + (dh.firstTForbit - hbfu.orbitFirst) * o2::constants::lhc::LHCOrbitMUS * 1.e-3;
+  LOGP(info, "SETTHING DH for {}/{} from tfCounter={} firstTForbit={} runNumber={}",
+       dh.dataOrigin.as<std::string>(), dh.dataDescription.as<std::string>(), dh.tfCounter, dh.firstTForbit, dh.runNumber);
+}
+
+//_________________________________________________________
 void HBFUtilsInitializer::addNewTimeSliceCallback(std::vector<o2::framework::CallbacksPolicy>& policies)
 {
   policies.push_back(o2::framework::CallbacksPolicy{
     [](o2::framework::DeviceSpec const& spec, o2::framework::ConfigContext const& context) -> bool {
+      LOGP(info, "HAS OPT {} {}", spec.name, (!context.helpOnCommandLine() && o2f::ConfigParamsHelper::hasOption(spec.options, HBFTFInfoOpt)));
       return (!context.helpOnCommandLine() && o2f::ConfigParamsHelper::hasOption(spec.options, HBFTFInfoOpt));
     },
     [](o2::framework::CallbackService& service, o2::framework::InitContext& context) {
-      auto fname = context.options().get<std::string>(HBFTFInfoOpt);
-      uint32_t delay = context.options().isSet(DelayOpt) ? uint32_t(1e6 * context.options().get<float>(DelayOpt)) : 0;
-      if (!fname.empty()) {
-        if (fname == HBFUSrc) { // simple linear enumeration from already updated HBFUtils
-          const auto& hbfu = o2::raw::HBFUtils::Instance();
-          service.set<o2::framework::CallbackService::Id::NewTimeslice>(
-            [offset = int64_t(hbfu.getFirstIRofTF({0, hbfu.orbitFirstSampled}).orbit), increment = int64_t(hbfu.nHBFPerTF),
-             startTime = hbfu.startTime, orbitFirst = hbfu.orbitFirst, runNumber = hbfu.runNumber, delay](o2::header::DataHeader& dh, o2::framework::DataProcessingHeader& dph) {
-              dh.firstTForbit = offset + increment * dh.tfCounter;
-              dh.runNumber = runNumber;
-              dph.creation = startTime + (dh.firstTForbit - orbitFirst) * o2::constants::lhc::LHCOrbitMUS * 1.e-3;
+      std::string irFrames, tfInput = context.options().get<std::string>(HBFTFInfoOpt);
+      if (context.options().hasOption(HBFIRFrameOpt)) {
+        irFrames = context.options().get<std::string>(HBFIRFrameOpt);
+      }
+      LOGP(info, "TFINPUT:{}, irFrames:{}", tfInput, irFrames);
+      uint32_t delay = context.options().hasOption(DelayOpt) && context.options().isSet(DelayOpt) ? uint32_t(1e6 * context.options().get<float>(DelayOpt)) : 0;
+      if (!tfInput.empty()) {
+        if (tfInput == HBFUSrc) { // simple linear enumeration from already updated HBFUtils
+          if (irFrames.empty()) { // push the whole TF
+            service.set<o2::framework::CallbackService::Id::NewTimeslice>([delay](o2::header::DataHeader& dh, o2::framework::DataProcessingHeader& dph) {
+              assignDataHeaderFromHBFUtils(dh, dph);
               static size_t tfcount = 0;
               if (tfcount++ && delay > 0) {
                 usleep(delay);
               }
             });
-        } else if (o2::utils::Str::endsWith(fname, ".root")) { // read TFIDinfo from file
-          if (!o2::utils::Str::pathExists(fname)) {
-            throw std::runtime_error(fmt::format("file {} does not exist", fname));
+          } else { // linear enumeration with IRFrames selection (skimming)
+            if (!o2::utils::Str::pathExists(irFrames)) {
+              throw std::runtime_error(fmt::format("file {} does not exist", irFrames));
+            }
+            readIRFramesVector(irFrames);
+            service.set<o2::framework::CallbackService::Id::NewTimeslice>(
+              [delay](o2::header::DataHeader& dh, o2::framework::DataProcessingHeader& dph) {
+                assignDataHeaderFromHBFUtilWithIRFrames(dh, dph);
+                static size_t tfcount = 0;
+                if (tfcount++ && delay > 0) {
+                  usleep(delay);
+                }
+              });
+          }
+        } else if (o2::utils::Str::endsWith(tfInput, ".root")) { // read TFIDinfo from file
+          if (!o2::utils::Str::pathExists(tfInput)) {
+            throw std::runtime_error(fmt::format("file {} does not exist", tfInput));
           }
           service.set<o2::framework::CallbackService::Id::NewTimeslice>(
-            [tfidinfo = readTFIDInfoVector(fname), delay](o2::header::DataHeader& dh, o2::framework::DataProcessingHeader& dph) {
-              assignDataHeader(tfidinfo, dh, dph);
+            [tfidinfo = readTFIDInfoVector(tfInput), delay](o2::header::DataHeader& dh, o2::framework::DataProcessingHeader& dph) {
+              assignDataHeaderFromTFIDInfo(tfidinfo, dh, dph);
               static size_t tfcount = 0;
               if (tfcount++ && delay > 0) {
                 usleep(delay);
