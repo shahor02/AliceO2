@@ -121,7 +121,7 @@ void DigitReader::run(ProcessingContext& pc)
     std::vector<o2::itsmft::ROFRecord> digROFRecSel;
     std::vector<o2::itsmft::MC2ROFRecord> digMC2ROFsSel;
     o2::dataformats::MCTruthContainer<o2::MCCompLabel> digitLabelsSel;
-    
+
     if (irFrames.size()) { // we assume the IRFrames are in the increasing order
       if (ent < 0) {
         ent++;
@@ -130,7 +130,7 @@ void DigitReader::run(ProcessingContext& pc)
       irfSel.setSelectedIRFrames(irFrames, 0, 0, mROFBiasInBC, true);
       const auto irMin = irFrames.front().getMin();
       const auto irMax = irFrames.back().getMax();
-      LOGP(info, "IRFRAME {} {}",irMin.asString(), irMax.asString());
+      LOGP(info, "IRFRAME {} {}", irMin.asString(), irMax.asString());
       while (mDigROFRec.size() && ent < mTree->GetEntries()) {
         // do we need to read a new entry?
         if (ent > mTree->GetReadEntry()) {
@@ -146,7 +146,7 @@ void DigitReader::run(ProcessingContext& pc)
           for (const auto& rof : mDigROFRec) {
             if (irfSel.check({rof.getBCData(), rof.getBCData() + mROFLengthInBC - 1}) != -1) {
 
-	      LOGP(info, "Adding selected ROF {}", rof.getBCData().asString());
+              LOGP(info, "Adding selected ROF {}", rof.getBCData().asString());
               // fill
               break;
             }
@@ -175,7 +175,7 @@ void DigitReader::run(ProcessingContext& pc)
       plabels->copyandflatten(sharedlabels);
       pc.outputs().snapshot(Output{mOrigin, "DIGITSMC2ROF", 0}, digMC2ROFsSel);
     }
-    
+
     if (!irFrames.size() || irFrames.back().isLast()) {
       pc.services().get<ControlService>().endOfStream();
       pc.services().get<ControlService>().readyToQuit(QuitRequest::Me);
