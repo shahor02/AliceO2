@@ -74,13 +74,13 @@ void ReadeDriverSpec::run(ProcessingContext& pc)
       HBFINI::LastIRFrameIndex < (long)HBFINI::IRFrames.size()) {
     v.push_back(HBFINI::IRFrames[HBFINI::LastIRFrameIndex]);
     LOGP(info, "OUTVEC {}/{}", v.back().getMin().asString(), v.back().getMax().asString());
-  } else {
-    LOGP(warn, "Did not find any IRFrame to push");
   }
-
-  if (HBFINI::LastIRFrameIndex == HBFINI::NTFs && !HBFINI::LastIRFrameSplit) {
+  count++;
+  LOGP(info, "RSS count {} of {} LastIRF {}", count, HBFINI::NTFs, HBFINI::LastIRFrameIndex);
+  if ((HBFINI::LastIRFrameIndex == HBFINI::NTFs && !HBFINI::LastIRFrameSplit) ||
+      (HBFINI::LastIRFrameIndex == -1 && count == HBFINI::NTFs)) {
     if (v.size()) {
-      v.back().setLastIRFrame(); // flag last Frame
+      v.back().setLast(); // flag last Frame
     }
     pc.services().get<ControlService>().endOfStream();
     pc.services().get<ControlService>().readyToQuit(QuitRequest::Me);

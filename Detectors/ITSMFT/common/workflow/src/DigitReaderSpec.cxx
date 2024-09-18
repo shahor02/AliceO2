@@ -19,6 +19,7 @@
 #include "Framework/ConfigParamRegistry.h"
 #include "Framework/Logger.h"
 #include "ITSMFTWorkflow/DigitReaderSpec.h"
+#include "ITSMFTBase/DPLAlpideParam.h"
 #include "SimulationDataFormat/MCCompLabel.h"
 #include "SimulationDataFormat/ConstMCTruthContainer.h"
 #include "DataFormatsITSMFT/PhysTrigger.h"
@@ -59,6 +60,7 @@ void DigitReader::init(InitContext& ic)
                                             ic.options().get<std::string>((mDetNameLC + "-digit-infile").c_str()));
   if (ic.options().hasOption("ignore-irframes") && !ic.options().get<bool>("ignore-irframes")) {
     mUseIRFrames = true;
+    LOGP(info, "Set IRFRAME mode");
   }
   connectTree(mFileName);
 }
@@ -78,7 +80,7 @@ void DigitReader::run(ProcessingContext& pc)
       mROFLengthInBC = alpideParam.roFrameLengthInBC;
     }
   }
-  gsl::span<o2::dataformats::IRFrame> irFrames{};
+  gsl::span<const o2::dataformats::IRFrame> irFrames{};
   if (mUseIRFrames) {
     irFrames = pc.inputs().get<gsl::span<o2::dataformats::IRFrame>>("driverInfo");
   }
@@ -114,14 +116,21 @@ void DigitReader::run(ProcessingContext& pc)
       pc.services().get<ControlService>().readyToQuit(QuitRequest::Me);
     }
   } else { // need to select particulars IRs range, presumably from the same tree entry
-    o2::utils::IRFrameSelector irfSel;
+    std::vector<o2::itsmft::Digit> digitsSel;
+    std::vector<o2::itsmft::GBTCalibData> calibSel;
+    std::vector<o2::itsmft::ROFRecord> digROFRecSel;
+    std::vector<o2::itsmft::MC2ROFRecord> digMC2ROFsSel;
+    o2::dataformats::MCTruthContainer<o2::MCCompLabel> digitLabelsSel;
+    
     if (irFrames.size()) { // we assume the IRFrames are in the increasing order
       if (ent < 0) {
         ent++;
       }
-      setSelectedIRFrames(irFrames, 0, 0, mROFBiasInBC, true);
+      o2::utils::IRFrameSelector irfSel;
+      irfSel.setSelectedIRFrames(irFrames, 0, 0, mROFBiasInBC, true);
       const auto irMin = irFrames.front().getMin();
       const auto irMax = irFrames.back().getMax();
+      LOGP(info, "IRFRAME {} {}",irMin.asString(), irMax.asString());
       while (mDigROFRec.size() && ent < mTree->GetEntries()) {
         // do we need to read a new entry?
         if (ent > mTree->GetReadEntry()) {
@@ -136,7 +145,8 @@ void DigitReader::run(ProcessingContext& pc)
         if (mDigROFRec.front().getBCData() <= irMax && mDigROFRec.back().getBCData() >= irMin) { // there is an overlap
           for (const auto& rof : mDigROFRec) {
             if (irfSel.check({rof.getBCData(), rof.getBCData() + mROFLengthInBC - 1}) != -1) {
-              found = true;
+
+	      LOGP(info, "Adding selected ROF {}", rof.getBCData().asString());
               // fill
               break;
             }
@@ -149,6 +159,23 @@ void DigitReader::run(ProcessingContext& pc)
         break; // push collected data
       }
     }
+
+    pc.outputs().snapshot(Output{mOrigin, "DIGITSROF", 0}, digROFRecSel);
+    pc.outputs().snapshot(Output{mOrigin, "DIGITS", 0}, digitsSel);
+    if (mUseCalib) {
+      pc.outputs().snapshot(Output{mOrigin, "GBTCALIB", 0}, calibSel);
+    }
+    if (mTriggerOut) {
+      std::vector<o2::itsmft::PhysTrigger> dummyTrig;
+      pc.outputs().snapshot(Output{mOrigin, "PHYSTRIG", 0}, dummyTrig);
+    }
+    if (mUseMC) {
+      auto& sharedlabels = pc.outputs().make<o2::dataformats::ConstMCTruthContainer<o2::MCCompLabel>>(Output{mOrigin, "DIGITSMCTR", 0});
+      digitLabelsSel.flatten_to(sharedlabels);
+      plabels->copyandflatten(sharedlabels);
+      pc.outputs().snapshot(Output{mOrigin, "DIGITSMC2ROF", 0}, digMC2ROFsSel);
+    }
+    
     if (!irFrames.size() || irFrames.back().isLast()) {
       pc.services().get<ControlService>().endOfStream();
       pc.services().get<ControlService>().readyToQuit(QuitRequest::Me);

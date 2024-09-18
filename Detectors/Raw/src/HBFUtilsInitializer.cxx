@@ -41,6 +41,7 @@ namespace o2f = o2::framework;
 
 int HBFUtilsInitializer::NTFs = 0;
 long HBFUtilsInitializer::LastIRFrameIndex = -1;
+bool HBFUtilsInitializer::LastIRFrameSplit = false;
 std::vector<o2::dataformats::IRFrame> HBFUtilsInitializer::IRFrames = {};
 
 //_________________________________________________________
@@ -187,6 +188,7 @@ void HBFUtilsInitializer::assignDataHeaderFromTFIDInfo(const std::vector<o2::dat
 void HBFUtilsInitializer::assignDataHeaderFromHBFUtils(o2::header::DataHeader& dh, o2::framework::DataProcessingHeader& dph)
 {
   const auto& hbfu = o2::raw::HBFUtils::Instance();
+  hbfu.print();
   auto offset = int64_t(hbfu.getFirstIRofTF({0, hbfu.orbitFirstSampled}).orbit);
   dh.firstTForbit = offset + int64_t(hbfu.nHBFPerTF) * dh.tfCounter;
   dh.runNumber = hbfu.runNumber;
@@ -199,17 +201,28 @@ void HBFUtilsInitializer::assignDataHeaderFromHBFUtils(o2::header::DataHeader& d
 void HBFUtilsInitializer::assignDataHeaderFromHBFUtilWithIRFrames(o2::header::DataHeader& dh, o2::framework::DataProcessingHeader& dph)
 {
   const auto& hbfu = o2::raw::HBFUtils::Instance();
+  hbfu.print();
   static int64_t offset = int64_t(hbfu.getFirstIRofTF({0, hbfu.orbitFirstSampled}).orbit);
   static uint32_t tfCounter = dh.tfCounter;
   static uint32_t firstTForbit = offset + int64_t(hbfu.nHBFPerTF) * tfCounter;
+  LOGP(info,"PRELSET firstTForbit={} for tfCounter {}",firstTForbit, tfCounter);
   // do we need to increment the tfCounter? Not if the next selected IRFrame still belongs to the previously sent TF
   bool incrementTF = false;
   if (LastIRFrameSplit) { // previously sent IRFrame ends in the next TF
     LastIRFrameSplit = false;
     incrementTF = true;
   } else if (++LastIRFrameIndex < NTFs) {
+    auto irMn = hbfu.getFirstIRofTF(IRFrames[LastIRFrameIndex].getMin());
+    auto irMx = hbfu.getFirstIRofTF(IRFrames[LastIRFrameIndex].getMax());
+    
     auto tfc0 = std::max(tfCounter, hbfu.getTF(IRFrames[LastIRFrameIndex].getMin()));
     auto tfc1 = std::max(tfCounter, hbfu.getTF(IRFrames[LastIRFrameIndex].getMax()));
+    LOGP(info, "EST: tfCounter:{} LastIRFrameIndex={} IRF:{}:{} TFs:{}:{} tfc0:{} tfc1:{}", tfCounter, LastIRFrameIndex,
+	 IRFrames[LastIRFrameIndex].getMin().asString(),IRFrames[LastIRFrameIndex].getMax().asString(),
+	 hbfu.getTF(IRFrames[LastIRFrameIndex].getMin()),
+	 hbfu.getTF(IRFrames[LastIRFrameIndex].getMax()),
+	 tfc0, tfc1
+	 );
     if (tfc0 > tfCounter) {
       tfCounter = tfc0;
       firstTForbit = offset + int64_t(hbfu.nHBFPerTF) * tfCounter;
@@ -242,6 +255,7 @@ void HBFUtilsInitializer::addNewTimeSliceCallback(std::vector<o2::framework::Cal
       if (!tfInput.empty()) {
         if (tfInput == HBFUSrc) { // simple linear enumeration from already updated HBFUtils
           if (irFrames.empty()) { // push the whole TF
+	    NTFs = 1;
             service.set<o2::framework::CallbackService::Id::NewTimeslice>([delay](o2::header::DataHeader& dh, o2::framework::DataProcessingHeader& dph) {
               assignDataHeaderFromHBFUtils(dh, dph);
               static size_t tfcount = 0;
