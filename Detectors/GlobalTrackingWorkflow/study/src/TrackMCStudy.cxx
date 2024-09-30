@@ -97,6 +97,7 @@ class TrackMCStudy : public Task
   bool acceptMCCharged(const MCTrack& tr, const o2::MCCompLabel& lb, int followDec = -1);
   bool propagateToRefX(o2::track::TrackParCov& trcTPC, o2::track::TrackParCov& trcITS);
   void updateTimeDependentParams(ProcessingContext& pc);
+  void ensureMCLoaded(const o2::MCCompLabel& lb);
   float getDCAYCut(float pt) const;
 
   gsl::span<const MCTrack> mCurrMCTracks;
@@ -111,6 +112,8 @@ class TrackMCStudy : public Task
   std::vector<int> mITSOcc;      //< N ITS clusters in the ROF containing collision
   int mNTPCOccBinLength = 0;     ///< TPC occ. histo bin length in TBs
   float mNTPCOccBinLengthInv;
+  int mCurrSrcMC = 0;
+  int mCurrEvMC = 0;
   int mVerbose = 0;
   float mITSTimeBiasMUS = 0.f;
   float mITSROFrameLengthMUS = 0.f; ///< ITS RO frame in mus
@@ -278,26 +281,25 @@ void TrackMCStudy::process(const o2::globaltracking::RecoContainer& recoData)
     }
   }
   // collect interesting MC particle (tracks and parents)
-  int curSrcMC = 0, curEvMC = 0;
-  for (curSrcMC = 0; curSrcMC < (int)mcReader.getNSources(); curSrcMC++) {
+  for (mCurrSrcMC = 0; mCurrSrcMC < (int)mcReader.getNSources(); mCurrSrcMC++) {
     if (mVerbose > 1) {
-      LOGP(info, "Source {}", curSrcMC);
+      LOGP(info, "Source {}", mCurrSrcMC);
     }
-    int nev = mcReader.getNEvents(curSrcMC);
+    int nev = mcReader.getNEvents(mCurrSrcMC);
     bool okAccVtx = true;
     if (nev != (int)mMCVtVec.size()) {
-      LOGP(error, "source {} has {} events while {} MC vertices were booked", curSrcMC, nev, mMCVtVec.size());
+      LOGP(error, "source {} has {} events while {} MC vertices were booked", mCurrSrcMC, nev, mMCVtVec.size());
       okAccVtx = false;
     }
-    for (curEvMC = 0; curEvMC < nev; curEvMC++) {
+    for (mCurrEvMC = 0; mCurrEvMC < nev; mCurrEvMC++) {
       if (mVerbose > 1) {
-        LOGP(info, "Event {}", curEvMC);
+        LOGP(info, "Event {}", mCurrEvMC);
       }
-      const auto& mt = mcReader.getTracks(curSrcMC, curEvMC);
+      const auto& mt = mcReader.getTracks(mCurrSrcMC, mCurrEvMC);
       mCurrMCTracks = gsl::span<const MCTrack>(mt.data(), mt.size());
-      const_cast<o2::dataformats::MCEventHeader&>(mcReader.getMCEventHeader(curSrcMC, curEvMC)).GetVertex(mCurrMCVertex);
+      const_cast<o2::dataformats::MCEventHeader&>(mcReader.getMCEventHeader(mCurrSrcMC, mCurrEvMC)).GetVertex(mCurrMCVertex);
       if (okAccVtx) {
-        auto& pos = mMCVtVec[curEvMC].pos;
+        auto& pos = mMCVtVec[mCurrEvMC].pos;
         if (pos[2] < -999) {
           pos[0] = mCurrMCVertex.X();
           pos[1] = mCurrMCVertex.Y();
@@ -305,7 +307,7 @@ void TrackMCStudy::process(const o2::globaltracking::RecoContainer& recoData)
         }
       }
       for (int itr = 0; itr < mCurrMCTracks.size(); itr++) {
-        processMCParticle(curSrcMC, curEvMC, itr);
+        processMCParticle(mCurrSrcMC, mCurrEvMC, itr);
       }
     }
   }
@@ -347,13 +349,7 @@ void TrackMCStudy::process(const o2::globaltracking::RecoContainer& recoData)
           lbl.setFakeFlag(false);
           auto entry = mSelMCTracks.find(lbl);
           if (entry == mSelMCTracks.end()) { // add the track which was not added during MC scan
-            if (lbl.getSourceID() != curSrcMC || lbl.getEventID() != curEvMC) {
-              curSrcMC = lbl.getSourceID();
-              curEvMC = lbl.getEventID();
-              const auto& mt = mcReader.getTracks(curSrcMC, curEvMC);
-              mCurrMCTracks = gsl::span<const MCTrack>(mt.data(), mt.size());
-              const_cast<o2::dataformats::MCEventHeader&>(mcReader.getMCEventHeader(curSrcMC, curEvMC)).GetVertex(mCurrMCVertex);
-            }
+            ensureMCLoaded(lbl);
             if (!acceptMCCharged(mCurrMCTracks[lbl.getTrackID()], lbl)) {
               continue;
             }
@@ -551,6 +547,14 @@ void TrackMCStudy::fillMCClusterInfo(const o2::globaltracking::RecoContainer& re
       unsigned int offs = TPCClusterIdxStruct.clusterOffset[sector][row];
       for (unsigned int icl0 = 0; icl0 < TPCClusterIdxStruct.nClusters[sector][row]; icl0++) {
         const auto labels = TPCClMClab->getLabels(icl0 + offs);
+
+        int cntDigCont = 0;
+        for (auto lbl : labels) {
+          ensureMCLoaded(lbl);
+          const auto& contMCTr = mCurrMCTracks[lbl.getTrackID()];
+          //   LOGP(info, "row {} Cl cont {} of {} PDG: {} Moth: {},  P: {:.2f} Pt: {:.2f} Eta:{:.2f} R: {:.2f} Z:{:.2f} |Lb Ev:{} Id:{} | tagged: {}", row, cntDigCont, labels.size(), contMCTr.GetPdgCode(), contMCTr.getMotherTrackId(), contMCTr.GetP(), contMCTr.GetPt(), contMCTr.GetEta(), contMCTr.R(), contMCTr.Vz(), lbl.getEventID(), lbl.getTrackID(), mSelMCTracks.find(lbl)!=mSelMCTracks.end());
+          cntDigCont++;
+        }
         for (const auto& lbl : labels) {
           auto entry = mSelMCTracks.find(lbl);
           if (entry == mSelMCTracks.end()) { // not selected
@@ -738,7 +742,7 @@ bool TrackMCStudy::acceptMCCharged(const MCTrack& tr, const o2::MCCompLabel& lb,
       std::abs(tr.GetTgl()) > params.maxTglMC ||
       tr.R2() > params.maxRMC * params.maxRMC) {
     if (mVerbose > 1 && followDecay > -1) {
-      LOGP(info, "rejecting decay {} prong : pdg={}, pT={}, tgL={}, r={}", followDecay, tr.GetPdgCode(), tr.GetPt(), tr.GetTgl(), std::sqrt(tr.R2()));
+      LOGP(info, "rejecting decay {} prong {} : pdg={}, pT={}, tgL={}, r={}", followDecay, lb.asString(), tr.GetPdgCode(), tr.GetPt(), tr.GetTgl(), std::sqrt(tr.R2()));
     }
     return false;
   }
@@ -747,7 +751,7 @@ bool TrackMCStudy::acceptMCCharged(const MCTrack& tr, const o2::MCCompLabel& lb,
   float posTgl2 = r2 > 1 && std::abs(dz) < 20 ? dz * dz / r2 : 0;
   if (posTgl2 > params.maxPosTglMC * params.maxPosTglMC) {
     if (mVerbose > 1 && followDecay > -1) {
-      LOGP(info, "rejecting decay {} prong : pdg={}, pT={}, tgL={}, dr={}, dz={} r={}, z={}, posTgl={}", followDecay, tr.GetPdgCode(), tr.GetPt(), tr.GetTgl(), std::sqrt(r2), dz, std::sqrt(tr.R2()), tr.GetStartVertexCoordinatesZ(), std::sqrt(posTgl2));
+      LOGP(info, "rejecting decay {} prong {} : pdg={}, pT={}, tgL={}, dr={}, dz={} r={}, z={}, posTgl={}", followDecay, lb.asString(), tr.GetPdgCode(), tr.GetPt(), tr.GetTgl(), std::sqrt(r2), dz, std::sqrt(tr.R2()), tr.GetStartVertexCoordinatesZ(), std::sqrt(posTgl2));
     }
     return false;
   }
@@ -835,6 +839,17 @@ void TrackMCStudy::loadTPCOccMap(const o2::globaltracking::RecoContainer& recoDa
     }
   } else {
     mTBinClOcc.resize(1);
+  }
+}
+
+void TrackMCStudy::ensureMCLoaded(const o2::MCCompLabel& lbl)
+{
+  if (lbl.getSourceID() != mCurrSrcMC || lbl.getEventID() != mCurrEvMC) {
+    mCurrSrcMC = lbl.getSourceID();
+    mCurrEvMC = lbl.getEventID();
+    const auto& mt = mcReader.getTracks(mCurrSrcMC, mCurrEvMC);
+    mCurrMCTracks = gsl::span<const MCTrack>(mt.data(), mt.size());
+    const_cast<o2::dataformats::MCEventHeader&>(mcReader.getMCEventHeader(mCurrSrcMC, mCurrEvMC)).GetVertex(mCurrMCVertex);
   }
 }
 
