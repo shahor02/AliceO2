@@ -43,9 +43,12 @@ struct MCTrackInfo {
   int16_t nTPCClShared = 0;
   uint8_t minTPCRow = -1;
   uint8_t maxTPCRow = 0;
+  uint8_t maxTPCRowInner = 0; // highest row in the sector containing the lowest one
+  uint8_t minTPCRowSect = 0xff;
+  uint8_t maxTPCRowSect = 0xff;
   int8_t nITSCl = 0;
   int8_t pattITSCl = 0;
-  ClassDefNV(MCTrackInfo, 1);
+  ClassDefNV(MCTrackInfo, 2);
 };
 
 struct RecTrack {
