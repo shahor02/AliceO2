@@ -145,8 +145,16 @@ void EntropyEncoderSpec::run(ProcessingContext& pc)
   }
 
   if (mSelIR) {
-    if (clusters.nTracks && clusters.solenoidBz != -1e6f && clusters.solenoidBz != mParam->bzkG) {
-      throw std::runtime_error("Configured solenoid Bz does not match value used for track model encoding");
+    try {
+      if (clusters.nTracks && clusters.solenoidBz != -1e6f && clusters.solenoidBz != mParam->bzkG) {
+        throw std::runtime_error("Configured solenoid Bz does not match value used for track model encoding");
+      }
+    } catch (const std::runtime_error& e) {
+      if (mParam->rec.tpc.compressionBMissmatchIgnore) {
+        GPUError("Bypassing exception %s in decompression (%f vs %f)", e.what(), mParam->bzkG, clusters.solenoidBz);
+      } else {
+        std::rethrow_exception(std::current_exception());
+      }
     }
     if (clusters.nTracks && clusters.maxTimeBin != -1e6 && clusters.maxTimeBin != mParam->continuousMaxTimeBin) {
       throw std::runtime_error("Configured max time bin does not match value used for track model encoding");

@@ -40,8 +40,16 @@ int32_t TPCClusterDecompressor::decompress(const CompressedClustersFlat* cluster
 
 int32_t TPCClusterDecompressor::decompress(const CompressedClusters* clustersCompressed, o2::tpc::ClusterNativeAccess& clustersNative, std::function<o2::tpc::ClusterNative*(size_t)> allocator, const GPUParam& param, bool deterministicRec)
 {
-  if (clustersCompressed->nTracks && clustersCompressed->solenoidBz != -1e6f && clustersCompressed->solenoidBz != param.bzkG) {
-    throw std::runtime_error("Configured solenoid Bz does not match value used for track model encoding");
+  try {
+    if (clustersCompressed->nTracks && clustersCompressed->solenoidBz != -1e6f && clustersCompressed->solenoidBz != param.bzkG) {
+      throw std::runtime_error("Configured solenoid Bz does not match value used for track model encoding");
+    }
+  } catch (const std::runtime_error& e) {
+    if (param.rec.tpc.compressionBMissmatchIgnore) {
+      GPUError("Bypassing exception %s in decompression (%f vs %f)", e.what(), param.bzkG, clustersCompressed->solenoidBz);
+    } else {
+      std::rethrow_exception(std::current_exception());
+    }
   }
   if (clustersCompressed->nTracks && clustersCompressed->maxTimeBin != -1e6 && clustersCompressed->maxTimeBin != param.continuousMaxTimeBin) {
     throw std::runtime_error("Configured max time bin does not match value used for track model encoding");

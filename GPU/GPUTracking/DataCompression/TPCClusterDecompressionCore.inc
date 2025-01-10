@@ -81,6 +81,7 @@ class TPCClusterDecompressionCore
     uint32_t row = cmprClusters.rowA[trackIndex];
     GPUTPCCompressionTrackModel track;
     uint32_t clusterIndex;
+    float bScale = (cmprClusters.solenoidBz != param.bzkG && param.bzkG != 0) ? cmprClusters.solenoidBz / param.bzkG : -1;
     for (clusterIndex = 0; clusterIndex < cmprClusters.nTrackClusters[trackIndex]; clusterIndex++) {
       uint32_t pad = 0, time = 0;
       if (clusterIndex != 0) {
@@ -140,7 +141,7 @@ class TPCClusterDecompressionCore
       float z = param.tpcGeometry.LinearTime2Z(slice, cluster.getTime());
       if (clusterIndex == 0) {
         zOffset = z;
-        track.Init(param.tpcGeometry.Row2X(row), y, z - zOffset, param.SliceParam[slice].Alpha, cmprClusters.qPtA[trackIndex], param);
+        track.Init(param.tpcGeometry.Row2X(row), y, z - zOffset, param.SliceParam[slice].Alpha, cmprClusters.qPtA[trackIndex], param, bScale);
       }
       if (clusterIndex + 1 < cmprClusters.nTrackClusters[trackIndex] && track.Filter(y, z - zOffset, row)) {
         break;

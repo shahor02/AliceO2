@@ -140,6 +140,7 @@ AddOptionRTC(rejectionStrategy, uint8_t, GPUCA_NAMESPACE::gpu::GPUSettings::Reje
 AddOptionRTC(mergeLoopersAfterburner, uint8_t, 1, "", 0, "Run afterburner for additional looper merging")
 AddOptionRTC(compressionTypeMask, uint8_t, GPUCA_NAMESPACE::gpu::GPUSettings::CompressionFull, "", 0, "TPC Compression mode bits (1=truncate charge/width LSB, 2=differences, 4=track-model)")
 AddOptionRTC(compressionSortOrder, uint8_t, GPUCA_NAMESPACE::gpu::GPUSettings::SortTime, "", 0, "Sort order of TPC compression (0 = time, 1 = pad, 2 = Z-time-pad, 3 = Z-pad-time, 4 = no sorting (use incoming order))")
+AddOptionRTC(compressionBMissmatchIgnore, int8_t, 0, "", 0, "Bypass mismatch in B scale between compressed data value and current GPUParam")
 AddOptionRTC(sigBitsCharge, uint8_t, 4, "", 0, "Number of significant bits for TPC cluster charge in compression mode 1")
 AddOptionRTC(sigBitsWidth, uint8_t, 3, "", 0, "Number of significant bits for TPC cluster width in compression mode 1")
 AddOptionRTC(forceEarlyTransform, int8_t, -1, "", 0, "Force early TPC transformation also for continuous data (-1 = auto)")

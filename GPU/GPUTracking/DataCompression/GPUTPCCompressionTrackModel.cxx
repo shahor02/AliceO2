@@ -23,7 +23,7 @@ using namespace GPUCA_NAMESPACE::gpu;
 // encoded with the old version!!!
 
 #ifdef GPUCA_COMPRESSION_TRACK_MODEL_MERGER
-GPUd() void GPUTPCCompressionTrackModel::Init(float x, float y, float z, float alpha, uint8_t qPt, const GPUParam& GPUrestrict() param)
+GPUd() void GPUTPCCompressionTrackModel::Init(float x, float y, float z, float alpha, uint8_t qPt, const GPUParam& GPUrestrict() param, float bRescale)
 {
   mProp.SetMaterialTPC();
   mProp.SetMaxSinPhi(GPUCA_MAX_SIN_PHI);
@@ -38,6 +38,9 @@ GPUd() void GPUTPCCompressionTrackModel::Init(float x, float y, float z, float a
   mTrk.SinPhi() = 0;
   mTrk.DzDs() = 0;
   mTrk.QPt() = (qPt - 127.f) * (20.f / 127.f);
+  if (bRescale != 0) {
+    mTrk.QPt() *= bRescale;
+  }
   mTrk.ResetCovariance();
   mProp.SetTrack(&mTrk, alpha);
   mParam = &param;
@@ -71,7 +74,7 @@ GPUd() int32_t GPUTPCCompressionTrackModel::Mirror()
 #include "GPUTPCTrackLinearisation.h"
 #include "GPUTPCTracker.h"
 
-GPUd() void GPUTPCCompressionTrackModel::Init(float x, float y, float z, float alpha, uint8_t qPt, const GPUParam& GPUrestrict() param)
+GPUd() void GPUTPCCompressionTrackModel::Init(float x, float y, float z, float alpha, uint8_t qPt, const GPUParam& GPUrestrict() param, float bRescale)
 {
   mTrk.InitParam();
   mTrk.SetX(x);
@@ -80,6 +83,9 @@ GPUd() void GPUTPCCompressionTrackModel::Init(float x, float y, float z, float a
   mTrk.SetSinPhi(0);
   mTrk.SetDzDs(0);
   mTrk.SetQPt((qPt - 127.f) * (20.f / 127.f));
+  if (bRescale != 0) {
+    mTrk.QPt() *= bRescale;
+  }
   mAlpha = alpha;
   mParam = &param;
   // GPUInfo("Initialized: x %f y %f z %f alpha %f qPt %f", x, y, z, alpha, mTrk.QPt());
@@ -113,7 +119,7 @@ GPUd() int32_t GPUTPCCompressionTrackModel::Mirror()
 
 #else // Default internal track model for compression
 
-GPUd() void GPUTPCCompressionTrackModel::Init(float x, float y, float z, float alpha, uint8_t qPt, const GPUParam& GPUrestrict() param)
+GPUd() void GPUTPCCompressionTrackModel::Init(float x, float y, float z, float alpha, uint8_t qPt, const GPUParam& GPUrestrict() param, float bRescale)
 {
   // initialize track model
   mX = x;
@@ -127,6 +133,10 @@ GPUd() void GPUTPCCompressionTrackModel::Init(float x, float y, float z, float a
   resetCovariance();
   mNDF = -5;
   mBz = param.bzCLight;
+  if (bRescale != 0) {
+    mBz *= bRescale;
+  }
+
   float pti = CAMath::Abs(mP[4]);
   if (pti < 1.e-4f) {
     pti = 1.e-4f; // set 10.000 GeV momentum for straight track

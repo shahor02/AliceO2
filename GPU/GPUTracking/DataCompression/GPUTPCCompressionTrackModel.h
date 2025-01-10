@@ -44,7 +44,7 @@ constexpr float MaxSinPhi = 0.999f;
 class GPUTPCCompressionTrackModel
 {
  public:
-  GPUd() void Init(float x, float y, float z, float alpha, uint8_t qPt, const GPUParam& proc);
+  GPUd() void Init(float x, float y, float z, float alpha, uint8_t qPt, const GPUParam& proc, float bRescale = 0);
   GPUd() int32_t Propagate(float x, float alpha);
   GPUd() int32_t Filter(float y, float z, int32_t iRow);
   GPUd() int32_t Mirror();
@@ -144,7 +144,6 @@ class GPUTPCCompressionTrackModel
   int32_t mNDF = -5;
   float mCosAlpha;
   float mSinAlpha;
-
   // propagation parameters
   float mBz;
   MaterialCorrection mMaterial;
