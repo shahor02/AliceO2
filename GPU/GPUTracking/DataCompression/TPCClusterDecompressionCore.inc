@@ -81,7 +81,7 @@ class TPCClusterDecompressionCore
     uint32_t row = cmprClusters.rowA[trackIndex];
     GPUTPCCompressionTrackModel track;
     uint32_t clusterIndex;
-    float bScale = (cmprClusters.solenoidBz != param.bzkG && param.bzkG != 0) ? cmprClusters.solenoidBz / param.bzkG : -1;
+    float bScale = 0; //(cmprClusters.solenoidBz != param.bzkG && param.bzkG != 0) ? cmprClusters.solenoidBz / param.bzkG : 0;
     for (clusterIndex = 0; clusterIndex < cmprClusters.nTrackClusters[trackIndex]; clusterIndex++) {
       uint32_t pad = 0, time = 0;
       if (clusterIndex != 0) {
