@@ -393,7 +393,7 @@ GPUdic(2, 1) void GPUTPCTrackletConstructor::UpdateTracklet(int32_t /*nBlocks*/,
       (void)found;
 #if defined(GPUCA_HAVE_O2HEADERS) && !defined(__OPENCL1__)
       if (!found && tracker.GetConstantMem()->calibObjects.dEdxCalibContainer) {
-        uint32_t pad = CAMath::Float2UIntRn(tracker.Param().tpcGeometry.LinearY2Pad(tracker.ISlice(), iRow, yUncorrected));
+        uint32_t pad = CAMath::Float2UIntRn(tracker.Param().tpcGeometry.LinearY2PadC(tracker.ISlice(), iRow, yUncorrected));
         if (pad < tracker.Param().tpcGeometry.NPads(iRow) && tracker.GetConstantMem()->calibObjects.dEdxCalibContainer->isDead(tracker.ISlice(), iRow, pad)) {
           r.mNMissed--;
           rowHit = CALINK_DEAD_CHANNEL;

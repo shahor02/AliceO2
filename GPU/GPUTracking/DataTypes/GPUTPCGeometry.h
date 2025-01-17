@@ -127,6 +127,12 @@ class GPUTPCGeometry // TODO: Make values constexpr
     return (slice >= GPUCA_NSLICES / 2) ? -u : u;
   }
 
+  GPUd() float LinearPad2YC(int32_t slice, int32_t row, float pad) const
+  {
+    const float u = (pad - 0.5f * (mNPads[row] - 1)) * PadWidth(row);
+    return (slice >= GPUCA_NSLICES / 2) ? -u : u;
+  }
+
   GPUd() static float LinearTime2Z(int32_t slice, float time)
   {
     const float v = 250.f - time * FACTOR_T2Z; // Used in compression, must remain constant at 250cm!
@@ -137,6 +143,12 @@ class GPUTPCGeometry // TODO: Make values constexpr
   {
     const float u = (slice >= GPUCA_NSLICES / 2) ? -y : y;
     return u / PadWidth(row) + 0.5f * mNPads[row];
+  }
+
+  GPUd() float LinearY2PadC(int32_t slice, int32_t row, float y) const
+  {
+    const float u = (slice >= GPUCA_NSLICES / 2) ? -y : y;
+    return u / PadWidth(row) + 0.5f * (mNPads[row] - 1);  // unbiased version of LinearY2Pad
   }
 
   GPUd() static float LinearZ2Time(int32_t slice, float z)
