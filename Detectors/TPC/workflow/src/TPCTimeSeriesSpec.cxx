@@ -42,6 +42,8 @@
 #include <chrono>
 #include "DataFormatsTPC/PIDResponse.h"
 #include "DataFormatsITS/TrackITS.h"
+#include "DataFormatsTRD/TrackTRD.h"
+#include "DataFormatsTRD/Tracklet64.h"
 #include "TROOT.h"
 #include "ReconstructionDataFormats/MatchInfoTOF.h"
 #include "DataFormatsTOF/Cluster.h"
@@ -187,6 +189,13 @@ class TPCTimeSeries : public Task
     if (mBufferDCA.mOccupancyMapTPC.size() > mMaxOccupancyHistBins) {
       mBufferDCA.mOccupancyMapTPC.resize(mMaxOccupancyHistBins);
     }
+    /// TRD tracklets
+    const auto& tracksTRD = mTPCOnly ? gsl::span<o2::trd::TrackTRD>() : recoData.getITSTPCTRDTracks<o2::trd::TrackTRD>();
+    std::unordered_map<int, int> indicesTRDTPC; // TPC track index -> TRD-TPC track index.
+    // loop over all TRD tracks and map them to TPC tracks
+    for (int i = 0; i < tracksTRD.size(); ++i) {
+      indicesTRDTPC[recoData.getTPCITSTrack(tracksTRD[i].getRefGlobalTrackId()).getRefTPC().getIndex()] = i;
+    }
 
     // TOF clusters
     const auto& tofClusters = mTPCOnly ? gsl::span<o2::tof::Cluster>() : recoData.getTOFClusters();
@@ -207,14 +216,12 @@ class TPCTimeSeries : public Task
       indicesITSTPC[tracksITSTPC[i].getRefTPC().getIndex()] = {i, idxVtx};
     }
 
-    std::vector<std::tuple<int, float, float, o2::track::TrackLTIntegral, double, float, unsigned int>> idxTPCTrackToTOFCluster; // store for each tpc track index the index to the TOF cluster
+    std::unordered_map<int, std::tuple<int, float, float, o2::track::TrackLTIntegral, double, float, unsigned int>> idxTPCTrackToTOFCluster; // store for each tpc track with TOF the index to the TOF cluster
 
     // get matches to TOF in case skimmed data is produced
     if (mUnbinnedWriter) {
       //   getLTIntegralOut(), ///< L,TOF integral calculated during the propagation
       //  getSignal()  mSignal = 0.0;              ///< TOF time in ps
-      o2::track::TrackLTIntegral defLT;
-      idxTPCTrackToTOFCluster = std::vector<std::tuple<int, float, float, o2::track::TrackLTIntegral, double, float, unsigned int>>(tracksTPC.size(), {-1, -999, -999, defLT, 0, 0, 0});
       const std::vector<gsl::span<const o2::dataformats::MatchInfoTOF>> tofMatches{recoData.getTPCTOFMatches(), recoData.getTPCTRDTOFMatches(), recoData.getITSTPCTOFMatches(), recoData.getITSTPCTRDTOFMatches()};
 
       const auto& ft0rec = recoData.getFT0RecPoints();
@@ -464,7 +471,7 @@ class TPCTimeSeries : public Task
       auto myThread = [&](int iThread) {
         for (size_t i = iThread; i < loopEnd; i += mNThreads) {
           if (acceptTrack(tracksTPC[i])) {
-            fillDCA(tracksTPC, tracksITSTPC, vertices, i, iThread, indicesITSTPC, tracksITS, idxTPCTrackToTOFCluster, tofClusters);
+            fillDCA(i, iThread, indicesITSTPC, idxTPCTrackToTOFCluster, indicesTRDTPC, recoData);
           }
         }
       };
@@ -481,7 +488,7 @@ class TPCTimeSeries : public Task
       auto myThread = [&](int iThread) {
         for (size_t i = iThread; i < loopEnd; i += mNThreads) {
           if (acceptTrack(tracksTPC[i])) {
-            fillDCA(tracksTPC, tracksITSTPC, vertices, i, iThread, indicesITSTPC, tracksITS, idxTPCTrackToTOFCluster, tofClusters);
+            fillDCA(i, iThread, indicesITSTPC, idxTPCTrackToTOFCluster, indicesTRDTPC, recoData);
           }
         }
       };
@@ -1117,11 +1124,13 @@ class TPCTimeSeries : public Task
     return isGoodTrack;
   }
 
-  void fillDCA(const gsl::span<const TrackTPC> tracksTPC, const gsl::span<const o2::dataformats::TrackTPCITS> tracksITSTPC, const gsl::span<const o2::dataformats::PrimaryVertex> vertices, const int iTrk, const int iThread, const std::unordered_map<unsigned int, std::array<int, 2>>& indicesITSTPC, const gsl::span<const o2::its::TrackITS> tracksITS, const std::vector<std::tuple<int, float, float, o2::track::TrackLTIntegral, double, float, unsigned int>>& idxTPCTrackToTOFCluster, const gsl::span<const o2::tof::Cluster> tofClusters)
+  void fillDCA(const int iTrk, const int iThread,
+               const std::unordered_map<unsigned int, std::array<int, 2>>& indicesITSTPC,
+               const std::unordered_map<int, std::tuple<int, float, float, o2::track::TrackLTIntegral, double, float, unsigned int>>& idxTPCTrackToTOFCluster,
+               const std::unordered_map<int, int> indicesTRDTPC, RecoContainer& recoData)
   {
-    const auto& trackFull = tracksTPC[iTrk];
+    const auto& trackFull = recoData.getTPCTracks()[iTrk];
     const bool isGoodTrack = checkTrack(trackFull);
-
     // check for min bias trigger - sample flat -
     bool minBiasOk = false;
     const float factorMinBias = 0.1 * mSamplingFactor;
@@ -1131,13 +1140,17 @@ class TPCTimeSeries : public Task
         minBiasOk = true;
       }
     }
-
     // check if at least one check passed
     if (!isGoodTrack && !minBiasOk) {
       return;
     }
 
-    o2::track::TrackParCov track = tracksTPC[iTrk];
+    const auto& vertice = recoData.getPrimaryVertices();
+    const auto& tracksITSTPC = recoData.getTPCITSTracks();
+    const auto& tracksITS = recoData.getITSTracks();
+    const auto& tofClusters = recoData.getTOFClusters();
+
+    o2::track::TrackParCov track(trackFull);
 
     // propagate track to the DCA and fill in slice
     auto propagator = o2::base::Propagator::Instance();
@@ -1156,7 +1169,7 @@ class TPCTimeSeries : public Task
       return;
     }
 
-    o2::track::TrackPar trackTmp(tracksTPC[iTrk]);
+    o2::track::TrackPar trackTmp(trackFull);
 
     // coarse propagation to centre of IROC for phi bin
     if (!propagator->propagateTo(trackTmp, mRefXSec, false, mMaxSnp, mCoarseStep, mMatType)) {
@@ -1186,7 +1199,7 @@ class TPCTimeSeries : public Task
     const auto idxITSTPC = (it != indicesITSTPC.end()) ? (it->second) : std::array<int, 2>{-1, -1};
 
     // get vertex (check if vertex ID is valid). In case no vertex is assigned return nearest vertex or else default vertex
-    const auto vertex = (idxITSTPC.back() != -1) ? vertices[idxITSTPC.back()] : ((mNearestVtxTPC[iTrk] != -1) ? vertices[mNearestVtxTPC[iTrk]] : o2::dataformats::PrimaryVertex{});
+    const auto vertex = (idxITSTPC.back() != -1) ? recoData.getPrimaryVertex(idxITSTPC.back()) : ((mNearestVtxTPC[iTrk] != -1) ? recoData.getPrimaryVertex(mNearestVtxTPC[iTrk]) : o2::dataformats::PrimaryVertex{});
 
     // calculate DCAz: (time TPC track - time vertex) * vDrift + sign_side * vertexZ
     const float signSide = trackFull.hasCSideClustersOnly() ? -1 : 1; // invert sign for C-side
@@ -1322,11 +1335,11 @@ class TPCTimeSeries : public Task
       float weight = 0;
       if (mSampleTsallis) {
         std::uniform_real_distribution<> distr(0., 1.);
-        writeData = o2::math_utils::Tsallis::downsampleTsallisCharged(tracksTPC[iTrk].getPt(), factorPt, mSqrt, weight, distr(mGenerator[iThread]));
+        writeData = o2::math_utils::Tsallis::downsampleTsallisCharged(trackFull.getPt(), factorPt, mSqrt, weight, distr(mGenerator[iThread]));
       }
       if (writeData || minBiasOk) {
         auto clusterMask = makeClusterBitMask(trackFull);
-        const auto& trkOrig = tracksTPC[iTrk];
+        const auto& trkOrig = trackFull;
         const bool isNearestVtx = (idxITSTPC.back() == -1); // is nearest vertex in case no vertex was found
         const float mx_ITS = hasITSTPC ? tracksITSTPC[idxITSTPC.front()].getX() : -1;
         const float pt_ITS = hasITSTPC ? tracksITSTPC[idxITSTPC.front()].getQ2Pt() : -1;
@@ -1341,19 +1354,33 @@ class TPCTimeSeries : public Task
         }
 
         // check for TOF and propagate TPC track to TOF cluster
-        bool hasTOFCluster = (std::get<0>(idxTPCTrackToTOFCluster[iTrk]) != -1);
-        auto tofCl = hasTOFCluster ? tofClusters[std::get<0>(idxTPCTrackToTOFCluster[iTrk])] : o2::tof::Cluster();
-
+        auto tofInfoID = idxTPCTrackToTOFCluster.find(iTrk);
+        bool hasTOFCluster = tofInfoID != idxTPCTrackToTOFCluster.end();
+        auto tofInfo = hasTOFCluster ? tofInfoID->second : std::tuple<int, float, float, o2::track::TrackLTIntegral, double, float, unsigned int>{-1, -999, -999, {}, 0, 0, 0};
+        auto tofCl = hasTOFCluster ? tofClusters[std::get<0>(tofInfo)] : o2::tof::Cluster();
         float tpcYDeltaAtTOF = -999;
         float tpcZDeltaAtTOF = -999;
         if (hasTOFCluster) {
-          o2::track::TrackPar trackTmpOut(tracksTPC[iTrk].getParamOut());
+          o2::track::TrackPar trackTmpOut(trackFull.getParamOut());
           if (trackTmpOut.rotate(o2::math_utils::sector2Angle(tofCl.getSector())) && propagator->propagateTo(trackTmpOut, tofCl.getX(), false, mMaxSnp, mFineStep, mMatType)) {
             tpcYDeltaAtTOF = trackTmpOut.getY() - tofCl.getY();
             tpcZDeltaAtTOF = signSide * (o2::tpc::ParameterElectronics::Instance().ZbinWidth * trackFull.getTime0() - vertex.getTimeStamp().getTimeStamp()) * mVDrift - trackTmpOut.getZ() + tofCl.getZ();
           }
         }
-
+        // get TRD tracklet s
+        std::vector<o2::trd::Tracklet64> trdTracklets;
+        int nTRDTracklets = 0;
+        auto indTRD = indicesTRDTPC.find(iTrk);
+        if (indTRD != indicesTRDTPC.end()) {
+          const auto& trackTRD = recoData.getITSTPCTRDTracks<o2::trd::TrackTRD>()[indTRD->second];
+          const auto& trklets = recoData.getTRDTracklets();
+          for (int iLayer = 0; iLayer < 6; iLayer++) {
+            int trkltIdx = trackTRD.getTrackletIndex(iLayer);
+            if (trkltIdx >= 0) { // there is a TRD tracklet in this layer
+              trdTracklets.push_back(trklets[trkltIdx]);
+            }
+          }
+        }
         // get delta parameter between inner and outer
         float deltaTPCParamInOutTgl = trackFull.getTgl() - trackFull.getParamOut().getTgl();
         float deltaTPCParamInOutQPt = trackFull.getQ2Pt() - trackFull.getParamOut().getQ2Pt();
@@ -1403,7 +1430,7 @@ class TPCTimeSeries : public Task
           o2::track::TrackParCov trackITSTPCTmp = tracksITSTPC[idxITSTPC.front()];
           o2::gpu::gpustd::array<float, 2> dcaITSTPCTmp{-1, -1};
           if (propagator->propagateToDCA(vertex.getXYZ(), trackITSTPCTmp, propagator->getNominalBz(), mFineStep, mMatType, &dcaITSTPCTmp)) {
-            o2::track::TrackParCov trackTPC = tracksTPC[iTrk];
+            o2::track::TrackParCov trackTPC(trackFull);
             if (trackTPC.rotate(trackITSTPCTmp.getAlpha()) && propagator->propagateTo(trackTPC, trackITSTPCTmp.getX(), false, mMaxSnp, mFineStep, mMatType)) {
               // store covariance of TPC track at vertex
               covTPCAtVertex0 = trackTPC.getCovarElem(0, 0);
@@ -1499,14 +1526,14 @@ class TPCTimeSeries : public Task
                             // TOF cluster
                             << "tpcYDeltaAtTOF=" << tpcYDeltaAtTOF
                             << "tpcZDeltaAtTOF=" << tpcZDeltaAtTOF
-                            << "mDXatTOF=" << std::get<1>(idxTPCTrackToTOFCluster[iTrk])
-                            << "mDZatTOF=" << std::get<2>(idxTPCTrackToTOFCluster[iTrk])
-                            << "mTOFLength=" << std::get<3>(idxTPCTrackToTOFCluster[iTrk])
-                            << "mTOFSignal=" << std::get<4>(idxTPCTrackToTOFCluster[iTrk])
-                            << "mDeltaTTOFTPC=" << std::get<5>(idxTPCTrackToTOFCluster[iTrk]) /// delta T- TPC TOF
-                            << "vertexTime=" << vertexTime                                    /// time stamp assigned to the vertex
-                            << "trackTime0=" << trackTime0                                    /// time stamp assigned to the track
-                            << "TOFmask=" << std::get<6>(idxTPCTrackToTOFCluster[iTrk])       /// delta T- TPC TOF
+                            << "mDXatTOF=" << std::get<1>(tofInfo)
+                            << "mDZatTOF=" << std::get<2>(tofInfo)
+                            << "mTOFLength=" << std::get<3>(tofInfo)
+                            << "mTOFSignal=" << std::get<4>(tofInfo)
+                            << "mDeltaTTOFTPC=" << std::get<5>(tofInfo) /// delta T- TPC TOF
+                            << "vertexTime=" << vertexTime              /// time stamp assigned to the vertex
+                            << "trackTime0=" << trackTime0              /// time stamp assigned to the track
+                            << "TOFmask=" << std::get<6>(tofInfo)       /// delta T- TPC TOF
                             // TPC delta param
                             << "deltaTPCParamInOutTgl=" << deltaTPCParamInOutTgl
                             << "deltaTPCParamInOutQPt=" << deltaTPCParamInOutQPt
