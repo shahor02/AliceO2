@@ -25,6 +25,7 @@ o2_add_library(GlobalTrackingStudy
                        src/TrackMCStudyConfig.cxx
                        src/TrackMCStudyTypes.cxx
                        src/TPCClusSelector.cxx
+                       src/TPCClusInfoExt.cxx
                PUBLIC_LINK_LIBRARIES O2::GlobalTracking
                                      O2::GlobalTrackingWorkflowReaders
                                      O2::GlobalTrackingWorkflowHelpers
@@ -36,8 +37,10 @@ o2_add_library(GlobalTrackingStudy
 o2_target_root_dictionary(GlobalTrackingStudy
                           HEADERS include/GlobalTrackingStudy/V0Ext.h
                                   include/GlobalTrackingStudy/TrackInfoExt.h
+                                  include/GlobalTrackingStudy/TPCClusInfoExt.h
                                   include/GlobalTrackingStudy/TrackMCStudyConfig.h
                                   include/GlobalTrackingStudy/TrackMCStudyTypes.h
+                                  include/GlobalTrackingStudy/TPCClusSelector.h
                           LINKDEF src/GlobalTrackingStudyLinkDef.h
 )
 

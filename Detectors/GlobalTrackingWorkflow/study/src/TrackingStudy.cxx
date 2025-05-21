@@ -43,6 +43,8 @@
 #include "ReconstructionDataFormats/DCA.h"
 #include "TPCCalibration/VDriftHelper.h"
 #include "TPCCalibration/CorrectionMapsLoader.h"
+#include "GlobalTrackingStudy/TPCClusSelector.h"
+#include "GlobalTrackingStudy/TPCClusInfoExt.h"
 #include "GPUO2InterfaceRefit.h"
 #include "GPUO2Interface.h" // Needed for propper settings in GPUParam.h
 #include "GPUParam.h"
@@ -51,6 +53,10 @@
 #include "Steer/MCKinematicsReader.h"
 #include "MathUtils/fit.h"
 #include <TF1.h>
+#include <numeric>
+#ifdef WITH_OPENMP
+#include <omp.h>
+#endif
 
 namespace o2::trackstudy
 {
@@ -82,6 +88,7 @@ class TrackingStudySpec : public Task
   void endOfStream(EndOfStreamContext& ec) final;
   void finaliseCCDB(ConcreteDataMatcher& matcher, void* obj) final;
   void process(o2::globaltracking::RecoContainer& recoData);
+  void processTrackClusters(const o2::tpc::TrackTPC& tpcTr, float tbstamp, o2::dataformats::TPCTrackClusInfoExt& dest, o2::globaltracking::RecoContainer& recoData);
 
  private:
   void updateTimeDependentParams(ProcessingContext& pc);
@@ -92,6 +99,7 @@ class TrackingStudySpec : public Task
   o2::tpc::VDriftHelper mTPCVDriftHelper{};
   o2::tpc::CorrectionMapsLoader mTPCCorrMapsLoader{};
   bool mUseMC{false}; ///< MC flag
+  std::unique_ptr<o2::tpc::TPCClusSelector> mTPCClusSelector;
   std::unique_ptr<o2::utils::TreeStreamRedirector> mDBGOut;
   std::unique_ptr<o2::utils::TreeStreamRedirector> mDBGOutVtx;
   std::unique_ptr<o2::gpu::GPUO2InterfaceRefit> mTPCRefitter; ///< TPC refitter used for TPC tracks refit during the reconstruction
@@ -107,10 +115,13 @@ class TrackingStudySpec : public Task
   float mMinX = 46.;
   float mMaxEta = 0.8;
   float mMinPt = 0.1;
+  float mTBDelta = 7.;  // delta TB for TPC ClusInfoExt study
+  float mPadDelta = 5.; // delta pad for TPC ClusInfoExt study
   int mNOccBinsDrift = 10;
   int mMinTPCClusters = 60;
   int mNTPCOccBinLength = 0; ///< TPC occ. histo bin length in TBs
   int mNHBPerTF = 0;
+  int mNThreads = 1;
   float mNTPCOccBinLengthInv;
   bool mStoreWithITSOnly = false;
   bool mDoPairsCorr = false;
@@ -144,12 +155,25 @@ void TrackingStudySpec::init(InitContext& ic)
   mDCAZFormula = ic.options().get<std::string>("dcaz-vs-pt");
   mDoPairsCorr = ic.options().get<bool>("pair-correlations");
   mNOccBinsDrift = ic.options().get<int>("noccbins");
+  mTBDelta = ic.options().get<float>("clext-tb-delta");
+  mPadDelta = ic.options().get<float>("clext-pad-delta");
+  mNThreads = ic.options().get<int>("nthreads");
+#ifndef WITH_OPENMP
+  if (mNThreads > 1) {
+    LOGP(warn, "No OpenMP");
+    mNThreads = 1;
+  }
+#endif
   if (mNOccBinsDrift < 3) {
     mNOccBinsDrift = 3;
   }
   auto str = ic.options().get<std::string>("occ-weight-fun");
   if (!str.empty()) {
     mOccWghFun = std::make_unique<TF1>("occFun", str.c_str(), -100., 100.);
+  }
+  if (ic.options().get<bool>("tpc-study")) {
+    mTPCClusSelector = std::make_unique<o2::tpc::TPCClusSelector>();
+    mTPCClusSelector->setNThreads(mNThreads);
   }
 }
 
@@ -167,6 +191,9 @@ void TrackingStudySpec::run(ProcessingContext& pc)
     mTBinClOccBef.clear();
     mTBinClOccAft.clear();
     mTBinClOccWgh.clear();
+    if (mTPCClusSelector) {
+      mTPCClusSelector->fill(recoData.getTPCClusters());
+    }
   }
 
   // prepare TPC occupancy data
@@ -263,6 +290,7 @@ void TrackingStudySpec::process(o2::globaltracking::RecoContainer& recoData)
   float tBiasITS = alpParams.roFrameBiasInBC * o2::constants::lhc::LHCBunchSpacingMUS;
   const o2::ft0::InteractionTag& ft0Params = o2::ft0::InteractionTag::Instance();
   std::vector<o2::dataformats::TrackInfoExt> trcExtVec;
+  std::vector<o2::dataformats::TPCTrackClusInfoExt> tpcClExtVec;
   std::vector<o2::trackstudy::TrackPairInfo> trcPairsVec;
   auto vdrift = mTPCVDriftHelper.getVDriftObject().getVDrift();
   float maxDriftTB = 250.f / vdrift / (o2::constants::lhc::LHCBunchSpacingMUS * 8);
@@ -415,6 +443,7 @@ void TrackingStudySpec::process(o2::globaltracking::RecoContainer& recoData)
       pve.VtxID = iv;
     }
     trcExtVec.clear();
+    tpcClExtVec.clear();
     trcPairsVec.clear();
     float q2ptITS, q2ptTPC, q2ptITSTPC, q2ptITSTPCTRD;
     for (int is = 0; is < GTrackID::NSources; is++) {
@@ -477,6 +506,9 @@ void TrackingStudySpec::process(o2::globaltracking::RecoContainer& recoData)
         }
         {
           auto& trcExt = trcExtVec.emplace_back();
+          if (mTPCClusSelector) {
+            tpcClExtVec.emplace_back();
+          }
           recoData.getTrackTime(vid, trcExt.ttime, trcExt.ttimeE);
           trcExt.track = trc;
           trcExt.dca = dca;
@@ -504,6 +536,9 @@ void TrackingStudySpec::process(o2::globaltracking::RecoContainer& recoData)
             }
             fillTPCClInfo(*tpcTr, trcExt, tsuse);
             trcExt.chi2TPC = tpcTr->getChi2();
+            if (mTPCClusSelector) {
+              processTrackClusters(*tpcTr, tsuse, tpcClExtVec.back(), recoData);
+            }
           }
           auto gidRefs = recoData.getSingleDetectorRefs(vid);
           if (gidRefs[GTrackID::ITS].isIndexSet()) {
@@ -576,7 +611,11 @@ void TrackingStudySpec::process(o2::globaltracking::RecoContainer& recoData)
                << "orbit=" << recoData.startIR.orbit << "tfID=" << TFCount
                << "tpcOccBef=" << tpcOccBef << "tpcOccAft=" << tpcOccAft
                << "tpcOccBefV=" << tpcOccBefV << "tpcOccAftV=" << tpcOccAftV
-               << "pve=" << pveVec[iv] << "trc=" << trcExtVec << "\n";
+               << "pve=" << pveVec[iv] << "trc=" << trcExtVec;
+    if (mTPCClusSelector) {
+      (*mDBGOut) << "trpv" << "tpccl=" << tpcClExtVec;
+    }
+    (*mDBGOut) << "trpv" << "\n";
 
     if (mDoPairsCorr) {
       for (int it0 = 0; it0 < (int)trcExtVec.size(); it0++) {
@@ -703,6 +742,38 @@ void TrackingStudySpec::process(o2::globaltracking::RecoContainer& recoData)
   TFCount++;
 }
 
+void TrackingStudySpec::processTrackClusters(const o2::tpc::TrackTPC& tpcTr, float tbstamp, o2::dataformats::TPCTrackClusInfoExt& dest, o2::globaltracking::RecoContainer& recoData)
+{
+  // collect calibrated cluster positions
+  const auto clRefs = recoData.getTPCTracksClusterRefs();
+  const auto tpcClusAcc = recoData.getTPCClusters();
+  dest.clInfo.clear();
+  dest.clInfo.resize(tpcTr.getNClusterReferences());
+#ifdef WITH_OPENMP
+#pragma omp parallel for schedule(dynamic) num_threads(mNThreads)
+#endif
+  for (int ic = 0; ic < tpcTr.getNClusterReferences(); ic++) { // from the outermost to innermost
+    auto& clInfoExt = dest.clInfo[ic];
+    ((o2::tpc::ClusterNative&)clInfoExt) = tpcTr.getCluster(clRefs, ic, tpcClusAcc, clInfoExt.sector, clInfoExt.row);
+    //      float x, y, z;
+    //      mTPCCorrMapsLoader.Transform(sector, row, cl->getPad(), cl->getTime(), x, y, z, tbstamp); // nominal time of the track
+    auto clrange = mTPCClusSelector->findClustersRange(clInfoExt.sector, clInfoExt.row, clInfoExt.getTime() - mTBDelta, clInfoExt.getTime() + mTBDelta, tpcClusAcc);
+    clInfoExt.nClusTPRange = -1;                            // timebin/pad range, stat from -1 to not count tested cluster
+    clInfoExt.nClusTRange = clrange.second - clrange.first; // timebin
+    if (clInfoExt.nClusTRange) {
+      const auto* clarr = tpcClusAcc.clusters[clInfoExt.sector][clInfoExt.row];
+      float padmin = clInfoExt.getPad() - mPadDelta, padmax = clInfoExt.getPad() + mPadDelta;
+      for (int icr = clrange.first; icr <= clrange.second; icr++) {
+        auto& clr = clarr[mTPCClusSelector->getIndex(clInfoExt.sector, clInfoExt.row, icr)];
+        if (clr.getPad() < padmin || clr.getPad() > padmax) {
+          continue;
+        }
+        clInfoExt.nClusTPRange++;
+      }
+    }
+  }
+}
+
 void TrackingStudySpec::endOfStream(EndOfStreamContext& ec)
 {
   mDBGOut.reset();
@@ -771,6 +842,10 @@ DataProcessorSpec getTrackingStudySpec(GTrackID::mask_t srcTracks, GTrackID::mas
     {"pair-correlations", VariantType::Bool, false, {"Do pairs correlation"}},
     {"occ-weight-fun", VariantType::String, "(x>=-40&&x<-5) ? (1./1225*pow(x+40,2)) : ((x>-5&&x<15) ? 1. : ((x>=15&&x<40) ? (-0.4/25*x+1.24 ) : ( (x>40&&x<100) ? -0.4/60*x+0.6+0.8/3 : 0)))", {"Occupancy weighting f-n vs time in musec"}},
     {"noccbins", VariantType::Int, 10, {"Number of occupancy bins per full drift time"}},
+    {"tpc-study", VariantType::Bool, false, {"Extended study of TPC tracks/clusters"}},
+    {"nthreads", VariantType::Int, 1, {"Number of OMP threads when relevant"}},
+    {"clext-tb-delta", VariantType::Float, 7.0f, {"delta TB for TPC ClusInfoExt study"}},
+    {"clext-pad-delta", VariantType::Float, 7.0f, {"delta Pad for TPC ClusInfoExt study"}},
     {"min-x-prop", VariantType::Float, 100.f, {"track should be propagated to this X at least"}},
   };
   o2::tpc::VDriftHelper::requestCCDBInputs(dataRequest->inputs);
