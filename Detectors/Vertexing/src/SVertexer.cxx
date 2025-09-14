@@ -653,10 +653,10 @@ bool SVertexer::checkV0(const TrackCand& seedP, const TrackCand& seedN, int iP, 
       for (int iv = vlist.getMin(); iv <= vlist.getMax(); iv++) {
         int vtMCID = mRecoCont->getPrimaryVertexMCLabel(iv).getEventID();
         watchHitVtxOK = vtMCID == watchLb0.getEventID();
-	vlistStr += fmt::format(" {}", iv);
+        vlistStr += fmt::format(" {}", iv);
         if (watchHitVtxOK) {
-	  vlistStr += "+";
-	  //          break;
+          vlistStr += "+";
+          //          break;
         }
       }
       if (watchHitVtxOK) {
