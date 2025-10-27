@@ -249,7 +249,7 @@ void configLayers()
   // air space between Middle and Outer Barrels
   zSpanH = 80.f;
   zBin = 10.;
-  rphiBin = lrData.back().rMax* TMath::Pi() * 2 / 18;  
+  rphiBin = lrData.back().rMax * TMath::Pi() * 2 / 18;
   lrData.emplace_back(LrData(lrData.back().rMax, 33.5, zSpanH, zBin, rphiBin));
 
   //===================================================================================
@@ -305,16 +305,16 @@ void configLayers()
   zBin = 10.;
   rphiBin = lrData.back().rMax * TMath::Pi() * 2 / 18;
   lrData.emplace_back(LrData(lrData.back().rMax, 56.5, zSpanH, zBin, rphiBin));
-  rphiBin = lrData.back().rMax * TMath::Pi() * 2 / 18;  
+  rphiBin = lrData.back().rMax * TMath::Pi() * 2 / 18;
   lrData.emplace_back(LrData(lrData.back().rMax, 60.5, zSpanH, zBin, rphiBin));
-  rphiBin = lrData.back().rMax * TMath::Pi() * 2 / 18;  
+  rphiBin = lrData.back().rMax * TMath::Pi() * 2 / 18;
   lrData.emplace_back(LrData(lrData.back().rMax, 61.5, zSpanH, zBin, rphiBin));
 
   zSpanH = 150.f;
   drStep = 3.5;
   zBin = 15.;
   do {
-    auto rmean = lrData.back().rMax + drStep / 2;                                                                                                                 
+    auto rmean = lrData.back().rMax + drStep / 2;
     rphiBin = rmean * TMath::Pi() * 2 / (NSect * 2);
     lrData.emplace_back(LrData(lrData.back().rMax, lrData.back().rMax + drStep, zSpanH, zBin, rphiBin));
   } while (lrData.back().rMax < 68.5 - kToler);
