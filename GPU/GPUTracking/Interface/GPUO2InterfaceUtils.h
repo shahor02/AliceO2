@@ -51,10 +51,16 @@ class GPUO2InterfaceUtils
   template <class S>
   static void RunZSEncoder(const S& in, std::unique_ptr<uint64_t[]>* outBuffer, uint32_t* outSizes, o2::raw::RawFileWriter* raw, const o2::InteractionRecord* ir, GPUO2InterfaceConfiguration& config, int32_t version, bool verify, bool padding = false, std::function<void(std::vector<o2::tpc::Digit>&)> digitsFilter = nullptr);
   template <class T>
-  static float getNominalGPUBz(T& src)
+  static float getNominalGPUBzOld(T& src)
   {
     return (5.00668f / 30000.f) * src.getL3Current();
   }
+  template <class T>
+  static float getNominalGPUBz(T& src)
+  {
+    return getNominalGPUBzFromCurrent(src.getL3Current());
+  }
+  static float getNominalGPUBzFromCurrent(float l3curr);
   static std::unique_ptr<GPUParam> getFullParam(float solenoidBz, uint32_t nHbfPerTf = 0, std::unique_ptr<GPUO2InterfaceConfiguration>* pConfiguration = nullptr, std::unique_ptr<GPUSettingsO2>* pO2Settings = nullptr, bool* autoMaxTimeBin = nullptr);
   static std::shared_ptr<GPUParam> getFullParamShared(float solenoidBz, uint32_t nHbfPerTf = 0, std::unique_ptr<GPUO2InterfaceConfiguration>* pConfiguration = nullptr, std::unique_ptr<GPUSettingsO2>* pO2Settings = nullptr, bool* autoMaxTimeBin = nullptr); // Return owning pointer
   static void paramUseExternalOccupancyMap(GPUParam* param, uint32_t nHbfPerTf, const uint32_t* occupancymap, int32_t occupancyMapSize);
