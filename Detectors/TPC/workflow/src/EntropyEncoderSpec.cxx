@@ -72,6 +72,11 @@ void EntropyEncoderSpec::init(o2::framework::InitContext& ic)
 
   mParam = GPUO2InterfaceUtils::getFullParam(0.f, 0, &mConfig, &mConfParam, &mAutoContinuousMaxTimeBin);
 
+  mOldFieldInit = ic.options().get<bool>("old-field-init");
+  if (mOldFieldInit) {
+    LOGP(warn, "Attention, using old (wrong) GPU field initialization for TPC CTF data decoding");
+  }
+
   if (mSelIR) {
     mTPCVDriftHelper.reset(new VDriftHelper);
   }
@@ -92,7 +97,7 @@ void EntropyEncoderSpec::run(ProcessingContext& pc)
     }
 
     mConfig->configGRP.grpContinuousMaxTimeBin = GPUO2InterfaceUtils::getTpcMaxTimeBinFromNHbf(GRPGeomHelper::instance().getGRPECS()->getNHBFPerTF());
-    mConfig->configGRP.solenoidBzNominalGPU = GPUO2InterfaceUtils::getNominalGPUBz(*GRPGeomHelper::instance().getGRPMagField());
+    mConfig->configGRP.solenoidBzNominalGPU = mOldFieldInit ? GPUO2InterfaceUtils::getNominalGPUBzOld(*GRPGeomHelper::instance().getGRPMagField()) : GPUO2InterfaceUtils::getNominalGPUBz(*GRPGeomHelper::instance().getGRPMagField());
     mParam->UpdateSettings(&mConfig->configGRP);
 
     mTPCVDriftHelper->extractCCDBInputs(pc);
@@ -328,6 +333,7 @@ DataProcessorSpec getEntropyEncoderSpec(bool inputFromFile, bool selIR, const st
             {{"ctfrep"}, "TPC", "CTFENCREP", 0, Lifetime::Timeframe}},
     AlgorithmSpec{adaptFromTask<EntropyEncoderSpec>(inputFromFile, selIR, ggreq, ctfdictOpt)},
     Options{{"no-ctf-columns-combining", VariantType::Bool, false, {"Do not combine correlated columns in CTF"}},
+            {"old-field-init", VariantType::Bool, false, {"Use old GPU field initialization for decoding"}},
             {"irframe-margin-bwd", VariantType::UInt32, 0u, {"margin in BC to add to the IRFrame lower boundary when selection is requested"}},
             {"irframe-margin-fwd", VariantType::UInt32, 0u, {"margin in BC to add to the IRFrame upper boundary when selection is requested"}},
             {"irframe-clusters-maxeta", VariantType::Float, 1.5f, {"Max eta for non-assigned clusters"}},

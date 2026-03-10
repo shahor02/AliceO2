@@ -62,6 +62,7 @@ class EntropyEncoderSpec : public o2::framework::Task
   std::shared_ptr<o2::base::GRPGeomRequest> mGRPRequest;
   bool mAutoContinuousMaxTimeBin = false;
 
+  bool mOldFieldInit = false;
   bool mFromFile = false;
   bool mSelIR = false;
   unsigned int mNThreads = 1;
