@@ -20,6 +20,7 @@
 #include "Framework/DataRefUtils.h"
 #include "CommonUtils/StringUtils.h"
 #include "CommonUtils/VerbosityConfig.h"
+#include "ITSMFTBase/DPLAlpideParam.h"
 #include <filesystem>
 
 #ifdef WITH_OPENMP
@@ -185,7 +186,7 @@ bool RawPixelDecoder<Mapping>::doIRMajorityPoll()
   for (auto& link : mGBTLinks) {
     if (link.statusInTF == GBTLink::DataSeen) {
       if (link.status == GBTLink::DataSeen || link.status == GBTLink::CachedDataExist) {
-        mIRPoll[link.ir]++;
+        mIRPoll[link.ir - link.layerStaggeringBC]++;
       } else if (link.status == GBTLink::StoppedOnEndOfData || link.status == GBTLink::AbortedOnError) {
         link.statusInTF = GBTLink::StoppedOnEndOfData;
         if (mVerbosity >= GBTLink::Verbosity::VerboseHeaders) {
@@ -223,6 +224,7 @@ void RawPixelDecoder<Mapping>::setupLinks(InputRecord& inputs)
 {
   constexpr uint32_t ROF_RAMP_FLAG = 0x1 << 4;
   constexpr uint32_t LINK_RECOVERY_FLAG = 0x1 << 5;
+  const auto& alpParams = o2::itsmft::DPLAlpideParam<o2::detectors::DetID::ITS>::Instance();
   mNLinksInTF = 0;
   mCurRUDecodeID = NORUDECODED;
   auto nLinks = mGBTLinks.size();
@@ -333,6 +335,7 @@ void RawPixelDecoder<Mapping>::setupLinks(InputRecord& inputs)
           LOG(info) << mSelfName << " Attaching " << link.describe() << " to RU#" << int(mMAP.FEEId2RUSW(link.feeID)) << " (stave " << ruOnLr << " of layer " << lr << ')';
         }
       }
+      link.layerStaggeringBC = alpParams.roFrameLayerDelayInBC[lr];
       link.idInRU = linkInRU;
       link.ruPtr->links[linkInRU] = il; // RU to link reference
       link.ruPtr->nLinks++;

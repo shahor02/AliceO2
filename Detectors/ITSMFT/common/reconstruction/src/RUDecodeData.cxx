@@ -102,7 +102,7 @@ void RUDecodeData::dumpcabledata(int icab)
 bool RUDecodeData::checkLinkInSync(int icab, const o2::InteractionRecord ir)
 {
   auto* link = cableLinkPtr[icab];
-  if (link->ir == ir) {
+  if (link->ir - link->layerStaggeringBC == ir) {
     link->rofJumpWasSeen = false;
     return true;
   }
@@ -110,7 +110,7 @@ bool RUDecodeData::checkLinkInSync(int icab, const o2::InteractionRecord ir)
     return true;
   }
   // apparently there was desynchronization
-  if (link->ir > ir) {
+  if (link->ir - link->layerStaggeringBC > ir) {
     link->rofJumpWasSeen = true;
 #ifdef _RAW_READER_ERROR_CHECKS_
     link->statistics.errorCounts[GBTLinkDecodingStat::ErrMissingROF]++;

@@ -101,6 +101,7 @@ struct GBTLink {
   uint16_t lastPageSize = 0; // size of the last CRU page
   uint32_t lanes = 0;     // lanes served by this link
   uint32_t subSpec = 0;   // link subspec
+  int layerStaggeringBC = 0; // BC of the link (on the whole layer) is shifted by this amount wrt TF start
   // RS do we need this >> ? // Legacy from old data format encoder
   int nTriggers = 0;    // number of triggers loaded (the last one might be incomplete)
   // << ?
