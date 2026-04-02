@@ -299,6 +299,7 @@ void TrackerTraits<NLayers>::computeLayerCells(const int iteration)
 
           float chi2{0.f};
           bool good{false};
+          track.setPerProjection(mTrkParams[iteration].AllowProjections);
           for (int iC{2}; iC--;) {
             const TrackingFrameInfo& trackingHit = mTimeFrame->getTrackingFrameInfoOnLayer(iLayer + iC)[clusId[iC]];
 
@@ -326,6 +327,7 @@ void TrackerTraits<NLayers>::computeLayerCells(const int iteration)
             good = !iC;
             chi2 += predChi2;
           }
+          track.setPerProjection(false);
           if (good) {
             TimeEstBC ts = currentTracklet.getTimeStamp();
             ts += nextTracklet.getTimeStamp();
@@ -836,7 +838,14 @@ bool TrackerTraits<NLayers>::fitTrack(TrackITSExt& track, int start, int end, in
 {
   auto propInstance = o2::base::Propagator::Instance();
 
+  if (mTrkParams[0].AllowProjections) {
+    track.setPerProjection(true);
+  }
+
   for (int iLayer{start}; iLayer != end; iLayer += step) {
+    if (mTrkParams[0].AllowProjections && nCl >= 3) {
+      track.setPerProjection(false);
+    }
     if (track.getClusterIndex(iLayer) == constants::UnusedIndex) {
       continue;
     }
@@ -879,6 +888,9 @@ bool TrackerTraits<NLayers>::fitTrack(TrackITSExt& track, int start, int end, in
       linRef->setZ(trackingHit.positionTrackingFrame[1]);
     }
     nCl++;
+  }
+  if (mTrkParams[0].AllowProjections) {
+    track.setPerProjection(false);
   }
   return std::abs(track.getQ2Pt()) < maxQoverPt && track.getChi2() < chi2ndfcut * (nCl * 2 - 5);
 }

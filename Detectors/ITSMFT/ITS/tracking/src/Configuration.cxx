@@ -178,6 +178,7 @@ std::vector<TrackingParameters> TrackingMode::getTrackingParameters(TrackingMode
 
   // global parameters set for every iteration
   for (auto& p : trackParams) {
+    p.AllowProjections = tc.allowProjections;
     // adjust pT settings to actual mag. field
     p.TrackletMinPt *= bFactorTracklets;
     for (int ilg = tc.MaxTrackLength; ilg >= tc.MinTrackLength; ilg--) {
