@@ -111,31 +111,43 @@ GPUd() bool TrackParametrizationWithError<value_T>::propagateTo(value_t xk, valu
   value_t kb = bz * constants::math::B2C;
   double r2inv = 1. / r2, r1inv = 1. / r1;
   double dx2r1pr2 = dx * r1pr2Inv;
-
   double hh = dx2r1pr2 * r2inv * (1. + r1 * r2 + f1 * f2), jj = dx * (dy2dx - f2 * r2inv);
+  bool notPerProj = !this->isPerProjection();
   double f02 = hh * r1inv;
   double f04 = hh * dx2r1pr2 * kb;
   double f24 = dx * kb; // x2r/mP[kQ2Pt];
-  double f12 = this->getTgl() * (f02 * f2 + jj);
+  double f12 = notPerProj ? this->getTgl() * (f02 * f2 + jj) : 0.;
   double f13 = dx * (r2 + f2 * dy2dx);
-  double f14 = this->getTgl() * (f04 * f2 + jj * f24);
+  double f14 = notPerProj ? this->getTgl() * (f04 * f2 + jj * f24) : 0;
 
   // b = C*ft
-  double b00 = f02 * c20 + f04 * c40, b01 = f12 * c20 + f14 * c40 + f13 * c30;
+  double b00 = f02 * c20 + f04 * c40, b01 = f13 * c30;
   double b02 = f24 * c40;
-  double b10 = f02 * c21 + f04 * c41, b11 = f12 * c21 + f14 * c41 + f13 * c31;
+  double b10 = f02 * c21 + f04 * c41, b11 = f13 * c31;
   double b12 = f24 * c41;
-  double b20 = f02 * c22 + f04 * c42, b21 = f12 * c22 + f14 * c42 + f13 * c32;
+  double b20 = f02 * c22 + f04 * c42, b21 = f13 * c32;
   double b22 = f24 * c42;
-  double b40 = f02 * c42 + f04 * c44, b41 = f12 * c42 + f14 * c44 + f13 * c43;
+  double b40 = f02 * c42 + f04 * c44, b41 = f13 * c43;
   double b42 = f24 * c44;
-  double b30 = f02 * c32 + f04 * c43, b31 = f12 * c32 + f14 * c43 + f13 * c33;
+  double b30 = f02 * c32 + f04 * c43, b31 = f13 * c33;
   double b32 = f24 * c43;
+
+  if (notPerProj) {
+    b01 += f12 * c20 + f14 * c40;
+    b11 += f12 * c21 + f14 * c41;
+    b21 += f12 * c22 + f14 * c42;
+    b41 += f12 * c42 + f14 * c44;
+    b31 += f12 * c32 + f14 * c43;
+  }
 
   // a = f*b = f*C*ft
   double a00 = f02 * b20 + f04 * b40, a01 = f02 * b21 + f04 * b41, a02 = f02 * b22 + f04 * b42;
-  double a11 = f12 * b21 + f14 * b41 + f13 * b31, a12 = f12 * b22 + f14 * b42 + f13 * b32;
+  double a11 = f13 * b31, a12 = f13 * b32;
   double a22 = f24 * b42;
+  if (notPerProj) {
+    a11 += f12 * b21 + f14 * b41;
+    a12 += f12 * b22 + f14 * b42;
+  }
 
   // F*C*Ft = C + (b + bt + a)
   c00 += b00 + b00 + a00;
@@ -184,12 +196,13 @@ GPUd() bool TrackParametrizationWithError<value_T>::propagateTo(value_t xk, Trac
   double cspRef0Inv = 1 / cspRef0, cspRef1Inv = 1 / cspRef1, cc = cspRef0 + cspRef1, ccInv = 1 / cc, dy2dx = (snpRef0 + snpRef1) * ccInv;
   double dxccInv = dx * ccInv, hh = dxccInv * cspRef1Inv * (1 + cspRef0 * cspRef1 + snpRef0 * snpRef1), jj = dx * (dy2dx - snpRef1 * cspRef1Inv);
 
+  bool notPerProj = !this->isPerProjection();
   double f02 = hh * cspRef0Inv;
   double f04 = hh * dxccInv * kb;
   double f24 = dx * kb;
-  double f12 = linRef0.getTgl() * (f02 * snpRef1 + jj);
+  double f12 = notPerProj ? linRef0.getTgl() * (f02 * snpRef1 + jj) : 0;
   double f13 = dx * (cspRef1 + snpRef1 * dy2dx); // dS
-  double f14 = linRef0.getTgl() * (f04 * snpRef1 + jj * f24);
+  double f14 = notPerProj ? linRef0.getTgl() * (f04 * snpRef1 + jj * f24) : 0;
 
   // difference between the current and reference state
   value_t diff[5];
@@ -214,21 +227,33 @@ GPUd() bool TrackParametrizationWithError<value_T>::propagateTo(value_t xk, Trac
           &c44 = mC[kSigQ2Pt2];
 
   // b = C*ft
-  double b00 = f02 * c20 + f04 * c40, b01 = f12 * c20 + f14 * c40 + f13 * c30;
+  double b00 = f02 * c20 + f04 * c40, b01 = f13 * c30;
   double b02 = f24 * c40;
-  double b10 = f02 * c21 + f04 * c41, b11 = f12 * c21 + f14 * c41 + f13 * c31;
+  double b10 = f02 * c21 + f04 * c41, b11 = f13 * c31;
   double b12 = f24 * c41;
-  double b20 = f02 * c22 + f04 * c42, b21 = f12 * c22 + f14 * c42 + f13 * c32;
+  double b20 = f02 * c22 + f04 * c42, b21 = f13 * c32;
   double b22 = f24 * c42;
-  double b40 = f02 * c42 + f04 * c44, b41 = f12 * c42 + f14 * c44 + f13 * c43;
+  double b40 = f02 * c42 + f04 * c44, b41 = f13 * c43;
   double b42 = f24 * c44;
-  double b30 = f02 * c32 + f04 * c43, b31 = f12 * c32 + f14 * c43 + f13 * c33;
+  double b30 = f02 * c32 + f04 * c43, b31 = f13 * c33;
   double b32 = f24 * c43;
+
+  if (notPerProj) {
+    b01 += f12 * c20 + f14 * c40;
+    b11 += f12 * c21 + f14 * c41;
+    b21 += f12 * c22 + f14 * c42;
+    b41 += f12 * c42 + f14 * c44;
+    b31 += f12 * c32 + f14 * c43;
+  }
 
   // a = f*b = f*C*ft
   double a00 = f02 * b20 + f04 * b40, a01 = f02 * b21 + f04 * b41, a02 = f02 * b22 + f04 * b42;
-  double a11 = f12 * b21 + f14 * b41 + f13 * b31, a12 = f12 * b22 + f14 * b42 + f13 * b32;
+  double a11 = f13 * b31, a12 = f13 * b32;
   double a22 = f24 * b42;
+  if (notPerProj) {
+    a11 += f12 * b21 + f14 * b41;
+    a12 += f12 * b22 + f14 * b42;
+  }
 
   // F*C*Ft = C + (b + bt + a)
   c00 += b00 + b00 + a00;
@@ -299,15 +324,16 @@ GPUd() bool TrackParametrizationWithError<value_T>::rotate(value_t alpha)
   value_t rr = (ca + snp / csp * sa);
 
   mC[kSigY2] *= (ca * ca);
-  mC[kSigZY] *= ca;
   mC[kSigSnpY] *= ca * rr;
-  mC[kSigSnpZ] *= rr;
   mC[kSigSnp2] *= rr * rr;
-  mC[kSigTglY] *= ca;
-  mC[kSigTglSnp] *= rr;
   mC[kSigQ2PtY] *= ca;
   mC[kSigQ2PtSnp] *= rr;
-
+  if (!this->isPerProjection()) {
+    mC[kSigZY] *= ca;
+    mC[kSigSnpZ] *= rr;
+    mC[kSigTglY] *= ca;
+    mC[kSigTglSnp] *= rr;
+  }
   checkCovariance();
   return true;
 }
@@ -363,14 +389,16 @@ GPUd() bool TrackParametrizationWithError<value_T>::rotate(value_t alpha, TrackP
 
   // plane rotation of existing cov matrix
   mC[kSigY2] *= ca * ca;
-  mC[kSigZY] *= ca;
   mC[kSigSnpY] *= ca * rr;
-  mC[kSigSnpZ] *= rr;
   mC[kSigSnp2] *= rr * rr;
-  mC[kSigTglY] *= ca;
-  mC[kSigTglSnp] *= rr;
   mC[kSigQ2PtY] *= ca;
   mC[kSigQ2PtSnp] *= rr;
+  if (!this->isPerProjection()) {
+    mC[kSigZY] *= ca;
+    mC[kSigSnpZ] *= rr;
+    mC[kSigTglY] *= ca;
+    mC[kSigTglSnp] *= rr;
+  }
 
   // transport covariance from pseudo 6x6 matrix to usual 5x5, Jacobian (trust to Sergey):
   auto cspRef1Inv = value_t(1) / cspRef1;
@@ -394,13 +422,13 @@ GPUd() bool TrackParametrizationWithError<value_T>::rotate(value_t alpha, TrackP
   mC[kSigTglZ] += cXSigTgl * j4;
   mC[kSigQ2PtY] += cXSigQ2Pt * j3;
   mC[kSigQ2PtSnp] += cXSigQ2Pt * j5;
-
-  mC[kSigZY] += cXSigZ * j3 + hXSigY * j4;
-  mC[kSigSnpZ] += cXSigSnp * j4 + hXSigZ * j5;
-  mC[kSigTglY] += cXSigTgl * j3;
-  mC[kSigTglSnp] += cXSigTgl * j5;
-  mC[kSigQ2PtZ] += cXSigQ2Pt * j4;
-
+  if (!this->isPerProjection()) {
+    mC[kSigZY] += cXSigZ * j3 + hXSigY * j4;
+    mC[kSigSnpZ] += cXSigSnp * j4 + hXSigZ * j5;
+    mC[kSigTglY] += cXSigTgl * j3;
+    mC[kSigTglSnp] += cXSigTgl * j5;
+    mC[kSigQ2PtZ] += cXSigQ2Pt * j4;
+  }
   checkCovariance();
   linRef0 = linRef1;
 
@@ -691,29 +719,42 @@ GPUd() bool TrackParametrizationWithError<value_T>::propagateTo(value_t xk, cons
   // evaluate matrix in double prec.
   value_t kb = b[2] * constants::math::B2C;
   double hh = dx2r1pr2 * r2inv * (1. + r1 * r2 + f1 * f2), jj = dx * (dy2dx - f2 * r2inv);
+  bool notPerProj = !this->isPerProjection();
   double f02 = hh * r1inv;
   double f04 = hh * dx2r1pr2 * kb;
   double f24 = dx * kb; // x2r/mP[kQ2Pt];
-  double f12 = this->getTgl() * (f02 * f2 + jj);
+  double f12 = notPerProj ? this->getTgl() * (f02 * f2 + jj) : 0.;
   double f13 = dx * (r2 + f2 * dy2dx);
-  double f14 = this->getTgl() * (f04 * f2 + jj * f24);
+  double f14 = notPerProj ? this->getTgl() * (f04 * f2 + jj * f24) : 0.;
 
   // b = C*ft
-  double b00 = f02 * c20 + f04 * c40, b01 = f12 * c20 + f14 * c40 + f13 * c30;
+  double b00 = f02 * c20 + f04 * c40, b01 = f13 * c30;
   double b02 = f24 * c40;
-  double b10 = f02 * c21 + f04 * c41, b11 = f12 * c21 + f14 * c41 + f13 * c31;
+  double b10 = f02 * c21 + f04 * c41, b11 = f13 * c31;
   double b12 = f24 * c41;
-  double b20 = f02 * c22 + f04 * c42, b21 = f12 * c22 + f14 * c42 + f13 * c32;
+  double b20 = f02 * c22 + f04 * c42, b21 = f13 * c32;
   double b22 = f24 * c42;
-  double b40 = f02 * c42 + f04 * c44, b41 = f12 * c42 + f14 * c44 + f13 * c43;
+  double b40 = f02 * c42 + f04 * c44, b41 = f13 * c43;
   double b42 = f24 * c44;
-  double b30 = f02 * c32 + f04 * c43, b31 = f12 * c32 + f14 * c43 + f13 * c33;
+  double b30 = f02 * c32 + f04 * c43, b31 = f13 * c33;
   double b32 = f24 * c43;
+
+  if (notPerProj) {
+    b01 += f12 * c20 + f14 * c40;
+    b11 += f12 * c21 + f14 * c41;
+    b21 += f12 * c22 + f14 * c42;
+    b41 += f12 * c42 + f14 * c44;
+    b31 += f12 * c32 + f14 * c43;
+  }
 
   // a = f*b = f*C*ft
   double a00 = f02 * b20 + f04 * b40, a01 = f02 * b21 + f04 * b41, a02 = f02 * b22 + f04 * b42;
-  double a11 = f12 * b21 + f14 * b41 + f13 * b31, a12 = f12 * b22 + f14 * b42 + f13 * b32;
+  double a11 = f13 * b31, a12 = f13 * b32;
   double a22 = f24 * b42;
+  if (notPerProj) {
+    a11 += f12 * b21 + f14 * b41;
+    a12 += f12 * b22 + f14 * b42;
+  }
 
   // F*C*Ft = C + (b + bt + a)
   c00 += b00 + b00 + a00;
@@ -924,12 +965,13 @@ GPUd() bool TrackParametrizationWithError<value_T>::propagateTo(value_t xk, Trac
   ccInv = value_t(1) / cc;
   dy2dx = (snpRef0 + snpRef1) * ccInv;
   double dxccInv = dx * ccInv, hh = dxccInv * cspRef1Inv * (1 + cspRef0 * cspRef1 + snpRef0 * snpRef1), jj = dx * (dy2dx - snpRef1 * cspRef1Inv);
+  bool notPerProj = !this->isPerProjection();
   double f02 = hh * cspRef0Inv;
   double f04 = hh * dxccInv * kb;
   double f24 = dx * kb;
-  double f12 = linRef0.getTgl() * (f02 * snpRef1 + jj);
+  double f12 = notPerProj ? linRef0.getTgl() * (f02 * snpRef1 + jj) : 0.;
   double f13 = dx * (cspRef1 + snpRef1 * dy2dx); // dS
-  double f14 = linRef0.getTgl() * (f04 * snpRef1 + jj * f24);
+  double f14 = notPerProj ? linRef0.getTgl() * (f04 * snpRef1 + jj * f24) : 0.;
 
   // difference between the current and reference state
   value_t diff[5];
@@ -956,21 +998,33 @@ GPUd() bool TrackParametrizationWithError<value_T>::propagateTo(value_t xk, Trac
           &c44 = mC[kSigQ2Pt2];
 
   // b = C*ft
-  double b00 = f02 * c20 + f04 * c40, b01 = f12 * c20 + f14 * c40 + f13 * c30;
+  double b00 = f02 * c20 + f04 * c40, b01 = f13 * c30;
   double b02 = f24 * c40;
-  double b10 = f02 * c21 + f04 * c41, b11 = f12 * c21 + f14 * c41 + f13 * c31;
+  double b10 = f02 * c21 + f04 * c41, b11 = f13 * c31;
   double b12 = f24 * c41;
-  double b20 = f02 * c22 + f04 * c42, b21 = f12 * c22 + f14 * c42 + f13 * c32;
+  double b20 = f02 * c22 + f04 * c42, b21 = f13 * c32;
   double b22 = f24 * c42;
-  double b40 = f02 * c42 + f04 * c44, b41 = f12 * c42 + f14 * c44 + f13 * c43;
+  double b40 = f02 * c42 + f04 * c44, b41 = f13 * c43;
   double b42 = f24 * c44;
-  double b30 = f02 * c32 + f04 * c43, b31 = f12 * c32 + f14 * c43 + f13 * c33;
+  double b30 = f02 * c32 + f04 * c43, b31 = f13 * c33;
   double b32 = f24 * c43;
+
+  if (notPerProj) {
+    b01 += f12 * c20 + f14 * c40;
+    b11 += f12 * c21 + f14 * c41;
+    b21 += f12 * c22 + f14 * c42;
+    b41 += f12 * c42 + f14 * c44;
+    b31 += f12 * c32 + f14 * c43;
+  }
 
   // a = f*b = f*C*ft
   double a00 = f02 * b20 + f04 * b40, a01 = f02 * b21 + f04 * b41, a02 = f02 * b22 + f04 * b42;
-  double a11 = f12 * b21 + f14 * b41 + f13 * b31, a12 = f12 * b22 + f14 * b42 + f13 * b32;
+  double a11 = f13 * b31, a12 = f13 * b32;
   double a22 = f24 * b42;
+  if (notPerProj) {
+    a11 += f12 * b21 + f14 * b41;
+    a12 += f12 * b22 + f14 * b42;
+  }
 
   // F*C*Ft = C + (b + bt + a)
   c00 += b00 + b00 + a00;
@@ -1106,17 +1160,19 @@ template <typename value_T>
 GPUd() auto TrackParametrizationWithError<value_T>::getPredictedChi2(const value_t* p, const value_t* cov) const -> value_t
 {
   // Estimate the chi2 of the space point "p" with the cov. matrix "cov"
+  value_t d = this->getY() - p[0];
+  value_t z = this->getZ() - p[1];
   auto sdd = static_cast<double>(getSigmaY2()) + static_cast<double>(cov[0]);
-  auto sdz = static_cast<double>(getSigmaZY()) + static_cast<double>(cov[1]);
   auto szz = static_cast<double>(getSigmaZ2()) + static_cast<double>(cov[2]);
+  if (this->isPerProjection()) {
+    return d * d / sdd + z * z / szz;
+  }
+  auto sdz = static_cast<double>(getSigmaZY()) + static_cast<double>(cov[1]);
   auto det = sdd * szz - sdz * sdz;
 
   if (gpu::CAMath::Abs(det) < constants::math::Almost0) {
     return constants::math::VeryBig;
   }
-
-  value_t d = this->getY() - p[0];
-  value_t z = this->getZ() - p[1];
   auto chi2 = (d * (szz * d - sdz * z) + z * (sdd * z - d * sdz)) / det;
   if (chi2 < 0.) {
 #ifndef GPUCA_ALIGPUCODE
@@ -1132,18 +1188,18 @@ template <typename value_T>
 GPUd() auto TrackParametrizationWithError<value_T>::getPredictedChi2Quiet(const value_t* p, const value_t* cov) const -> value_t
 {
   // Estimate the chi2 of the space point "p" with the cov. matrix "cov"
+  value_t d = this->getY() - p[0];
+  value_t z = this->getZ() - p[1];
   auto sdd = static_cast<double>(getSigmaY2()) + static_cast<double>(cov[0]);
-  auto sdz = static_cast<double>(getSigmaZY()) + static_cast<double>(cov[1]);
   auto szz = static_cast<double>(getSigmaZ2()) + static_cast<double>(cov[2]);
+  if (this->isPerProjection()) {
+    return d * d / sdd + z * z / szz;
+  }
+  auto sdz = static_cast<double>(getSigmaZY()) + static_cast<double>(cov[1]);
   auto det = sdd * szz - sdz * sdz;
-
   if (gpu::CAMath::Abs(det) < constants::math::Almost0) {
     return constants::math::VeryBig;
   }
-
-  value_t d = this->getY() - p[0];
-  value_t z = this->getZ() - p[1];
-
   return (d * (szz * d - sdz * z) + z * (sdd * z - d * sdz)) / det;
 }
 
@@ -1298,6 +1354,15 @@ GPUd() bool TrackParametrizationWithError<value_T>::update(const value_t* p, con
 {
   // Update the track parameters with the space point "p" having
   // the covariance matrix "cov"
+  bool notPerProj = !this->isPerProjection();
+  if (this->isFirstUpdate()) {
+    this->setParam(value_T(p[0]), 0);
+    this->setParam(value_T(p[1]), 1);
+    mC[0] = value_T(cov[0]);
+    mC[1] = notPerProj ? value_T(cov[1]) : value_T(0.);
+    mC[2] = value_T(cov[2]);
+    return true;
+  }
 
   value_t &cm00 = mC[kSigY2], &cm10 = mC[kSigZY], &cm11 = mC[kSigZ2], &cm20 = mC[kSigSnpY], &cm21 = mC[kSigSnpZ],
           &cm22 = mC[kSigSnp2], &cm30 = mC[kSigTglY], &cm31 = mC[kSigTglZ], &cm32 = mC[kSigTglSnp], &cm33 = mC[kSigTgl2],
@@ -1306,24 +1371,40 @@ GPUd() bool TrackParametrizationWithError<value_T>::update(const value_t* p, con
 
   // use double precision?
   double r00 = static_cast<double>(cov[0]) + static_cast<double>(cm00);
-  double r01 = static_cast<double>(cov[1]) + static_cast<double>(cm10);
+  double r01 = notPerProj ? static_cast<double>(cov[1]) + static_cast<double>(cm10) : 0.;
   double r11 = static_cast<double>(cov[2]) + static_cast<double>(cm11);
-  double det = r00 * r11 - r01 * r01;
-
-  if (gpu::CAMath::Abs(det) < constants::math::Almost0) {
-    return false;
+  if (notPerProj) {
+    double det = r00 * r11 - r01 * r01;
+    if (gpu::CAMath::Abs(det) < constants::math::Almost0) {
+      return false;
+    }
+    double detI = 1. / det;
+    double tmp = r00;
+    r00 = r11 * detI;
+    r11 = tmp * detI;
+    r01 = -r01 * detI;
+  } else {
+    r00 = value_T(1.) / r00;
+    r11 = value_T(1.) / r11;
   }
-  double detI = 1. / det;
-  double tmp = r00;
-  r00 = r11 * detI;
-  r11 = tmp * detI;
-  r01 = -r01 * detI;
-
-  double k00 = cm00 * r00 + cm10 * r01, k01 = cm00 * r01 + cm10 * r11;
-  double k10 = cm10 * r00 + cm11 * r01, k11 = cm10 * r01 + cm11 * r11;
-  double k20 = cm20 * r00 + cm21 * r01, k21 = cm20 * r01 + cm21 * r11;
-  double k30 = cm30 * r00 + cm31 * r01, k31 = cm30 * r01 + cm31 * r11;
-  double k40 = cm40 * r00 + cm41 * r01, k41 = cm40 * r01 + cm41 * r11;
+  double k00 = cm00 * r00, k01 = 0.;
+  double k10 = 0., k11 = cm11 * r11;
+  double k20 = cm20 * r00, k21 = 0.;
+  double k30 = 0.;
+  double k31 = cm31 * r11;
+  double k40 = cm40 * r00, k41 = 0.;
+  if (notPerProj) {
+    k00 += cm10 * r01;
+    k01 = cm00 * r01 + cm10 * r11;
+    k10 = cm10 * r00 + cm11 * r01;
+    k11 += cm10 * r01;
+    k20 += cm21 * r01;
+    k21 = cm20 * r01 + cm21 * r11;
+    k30 = cm30 * r00 + cm31 * r01;
+    k31 += cm30 * r01;
+    k40 += cm41 * r01;
+    k41 = cm40 * r01 + cm41 * r11;
+  }
 
   value_t dy = p[kY] - this->getY(), dz = p[kZ] - this->getZ();
   value_t dsnp = k20 * dy + k21 * dz;
@@ -1331,33 +1412,51 @@ GPUd() bool TrackParametrizationWithError<value_T>::update(const value_t* p, con
     return false;
   }
 
-  const params_t dP{value_t(k00 * dy + k01 * dz), value_t(k10 * dy + k11 * dz), dsnp, value_t(k30 * dy + k31 * dz),
-                    value_t(k40 * dy + k41 * dz)};
+  const params_t dP{
+    value_t(k00 * dy + k01 * dz),
+    value_t(k10 * dy + k11 * dz),
+    dsnp,
+    value_t(k30 * dy + k31 * dz),
+    value_t(k40 * dy + k41 * dz)};
   this->updateParams(dP);
 
-  double c01 = cm10, c02 = cm20, c03 = cm30, c04 = cm40;
-  double c12 = cm21, c13 = cm31, c14 = cm41;
+  const double c02 = cm20, c04 = cm40, c13 = cm31;
+  if (notPerProj) {
+    const double c01 = cm10, c03 = cm30, c12 = cm21, c14 = cm41;
+    cm00 -= k00 * cm00 + k01 * cm10;
+    cm10 -= k00 * c01 + k01 * cm11;
+    cm20 -= k00 * c02 + k01 * c12;
+    cm30 -= k00 * c03 + k01 * c13;
+    cm40 -= k00 * c04 + k01 * c14;
 
-  cm00 -= k00 * cm00 + k01 * cm10;
-  cm10 -= k00 * c01 + k01 * cm11;
-  cm20 -= k00 * c02 + k01 * c12;
-  cm30 -= k00 * c03 + k01 * c13;
-  cm40 -= k00 * c04 + k01 * c14;
+    cm11 -= k10 * c01 + k11 * cm11;
+    cm21 -= k10 * c02 + k11 * c12;
+    cm31 -= k10 * c03 + k11 * c13;
+    cm41 -= k10 * c04 + k11 * c14;
 
-  cm11 -= k10 * c01 + k11 * cm11;
-  cm21 -= k10 * c02 + k11 * c12;
-  cm31 -= k10 * c03 + k11 * c13;
-  cm41 -= k10 * c04 + k11 * c14;
+    cm22 -= k20 * c02 + k21 * c12;
+    cm32 -= k20 * c03 + k21 * c13;
+    cm42 -= k20 * c04 + k21 * c14;
 
-  cm22 -= k20 * c02 + k21 * c12;
-  cm32 -= k20 * c03 + k21 * c13;
-  cm42 -= k20 * c04 + k21 * c14;
+    cm33 -= k30 * c03 + k31 * c13;
+    cm43 -= k30 * c04 + k31 * c14;
 
-  cm33 -= k30 * c03 + k31 * c13;
-  cm43 -= k30 * c04 + k31 * c14;
+    cm44 -= k40 * c04 + k41 * c14;
+  } else {
+    cm00 -= k00 * cm00;
+    cm20 -= k00 * c02;
+    cm40 -= k00 * c04;
 
-  cm44 -= k40 * c04 + k41 * c14;
+    cm11 -= k11 * cm11;
+    cm31 -= k11 * c13;
 
+    cm22 -= k20 * c02;
+
+    cm33 -= k31 * c13;
+
+    cm42 -= k20 * c04;
+    cm44 -= k40 * c04;
+  }
   checkCovariance();
 
   return true;
@@ -1482,8 +1581,10 @@ GPUd() bool TrackParametrizationWithError<value_T>::correctForMaterial(value_t x
     value_t t2c2I = theta2 * cst2I;
     cC22 = t2c2I * csp2;
     cC33 = t2c2I * cst2I;
-    cC43 = t2c2I * fp34;
-    cC44 = theta2 * fp34 * fp34;
+    if (!this->isPerProjection()) {
+      cC43 = t2c2I * fp34;
+      cC44 = theta2 * fp34 * fp34;
+    }
     // optimize this
     //    cC22 = theta2*((1.-getSnp())*(1.+getSnp()))*(1. + this->getTgl()*getTgl());
     //    cC33 = theta2*(1. + this->getTgl()*getTgl())*(1. + this->getTgl()*getTgl());
@@ -1617,8 +1718,10 @@ GPUd() bool TrackParametrizationWithError<value_T>::correctForMaterial(TrackPara
     value_t t2c2I = theta2 * cst2I;
     cC22 = t2c2I * csp2;
     cC33 = t2c2I * cst2I;
-    cC43 = t2c2I * fp34;
-    cC44 = theta2 * fp34 * fp34;
+    if (!this->isPerProjection()) {
+      cC43 = t2c2I * fp34;
+      cC44 = theta2 * fp34 * fp34;
+    }
     // optimize this
     //    cC22 = theta2*((1.-getSnp())*(1.+getSnp()))*(1. + this->getTgl()*getTgl());
     //    cC33 = theta2*(1. + this->getTgl()*getTgl())*(1. + this->getTgl()*getTgl());
