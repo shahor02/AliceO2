@@ -781,7 +781,7 @@ void TrackMCStudy::processTPCTrackRefs()
       float tgL = trf.Pz() / pT;
       std::array<float, 5> pars = {secY, trf.Z(), std::sin(dphiPt), tgL, q / pT};
       auto& refTrack = mSelTRefs.emplace_back(secX, alpsec[sector], pars);
-      refTrack.setUserField(uint16_t(sector));
+      refTrack.setUserField(uint8_t(sector));
       nrefsSel++;
     }
     if (nrefsSel < params.minTPCRefsToExtractClRes) {
