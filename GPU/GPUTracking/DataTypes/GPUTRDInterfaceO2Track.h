@@ -70,11 +70,15 @@ class trackInterface<o2::track::TrackParCov> : public o2::track::TrackParCov
 
   GPUdi() bool CheckNumericalQuality() const { return true; }
 
-  GPUdi() void setPileUpDistance(uint8_t bwd, uint8_t fwd) { setUserField((((uint16_t)bwd) << 8) | fwd); }
-  GPUdi() bool hasPileUpInfo() const { return getUserField() != 0; }
+  GPUdi() void setPileUpDistance(uint8_t bwd, uint8_t fwd)
+  {
+    mPileUpDistanceFwd = fwd;
+    mPileUpDistanceBwd = bwd;
+  }
+  GPUdi() bool hasPileUpInfo() const { return (mPileUpDistanceFwd != 0) || (mPileUpDistanceBwd != 0); }
   GPUdi() bool hasPileUpInfoBothSides() const { return getPileUpDistanceBwd() > 0 && getPileUpDistanceFwd() > 0; }
-  GPUdi() uint8_t getPileUpDistanceBwd() const { return getUserField() >> 8; }
-  GPUdi() uint8_t getPileUpDistanceFwd() const { return getUserField() & 255; }
+  GPUdi() uint8_t getPileUpDistanceBwd() const { return mPileUpDistanceBwd; }
+  GPUdi() uint8_t getPileUpDistanceFwd() const { return mPileUpDistanceFwd; }
   GPUdi() uint16_t getPileUpSpan() const { return ((uint16_t)getPileUpDistanceBwd()) + getPileUpDistanceFwd(); }
   GPUdi() float getPileUpMean() const { return hasPileUpInfoBothSides() ? 0.5f * (getPileUpDistanceFwd() + getPileUpDistanceBwd()) : getPileUpDistanceFwd() + getPileUpDistanceBwd(); }
   GPUdi() float getPileUpTimeShiftMUS() const { return getPileUpMean() * o2::constants::lhc::LHCBunchSpacingMUS; }
@@ -85,8 +89,10 @@ class trackInterface<o2::track::TrackParCov> : public o2::track::TrackParCov
  private:
   o2::track::TrackLTIntegral mLTOut;
   o2::track::TrackParCov mParamOut;
+  uint8_t mPileUpDistanceFwd = 0;
+  uint8_t mPileUpDistanceBwd = 0;
 
-  ClassDefNV(trackInterface, 1);
+  ClassDefNV(trackInterface, 2);
 };
 
 } // namespace o2::gpu

@@ -93,6 +93,11 @@ enum CovLabels : int {
   kSigQ2Pt2
 };
 
+enum TrackBits : uint8_t { // reserved track bits
+  kFirstUpdate,
+  kPerProjection
+};
+
 enum DirType : int { DirInward = -1,
                      DirAuto = 0,
                      DirOutward = 1 };
@@ -249,8 +254,13 @@ class TrackParametrization
   GPUd() bool isValid() const;
   GPUd() void invalidate();
 
-  GPUhd() uint16_t getUserField() const;
-  GPUhd() void setUserField(uint16_t v);
+  GPUhd() uint8_t getUserField() const;
+  GPUhd() void setUserField(uint8_t v);
+
+  GPUhd() void setPerProjection(bool v) { setBit(kPerProjection, v); }     // request perform operations per projection
+  GPUhd() bool isPerProjection() const { return testBit(kPerProjection); } // perform operations per projection?
+  GPUhd() void setFirstUpdate(bool v) { setBit(kFirstUpdate, v); }         // request perform operations per projection
+  GPUhd() bool isFirstUpdate() const { return testBit(kFirstUpdate); }     // perform operations per projection?
 
   GPUd() void printParam() const;
   GPUd() void printParamHexadecimal();
@@ -267,6 +277,11 @@ class TrackParametrization
   GPUd() void updateParams(const value_t* delta);
 
   GPUd() yzerr_t getVertexInTrackFrame(const o2::dataformats::VertexBase& vtx) const;
+
+ protected:
+  GPUhd() void setBit(uint8_t b, bool v = true);
+  GPUhd() bool testBit(uint8_t b) const;
+  GPUhd() uint8_t getBits() const;
 
  private:
   //
@@ -740,16 +755,43 @@ GPUdi() void TrackParametrization<value_T>::invalidate()
   mX = InvalidX;
 }
 
+//____________________________________________________________
 template <typename value_T>
-GPUhdi() uint16_t TrackParametrization<value_T>::getUserField() const
+GPUhdi() void TrackParametrization<value_T>::setBit(uint8_t b, bool v)
 {
-  return mUserField;
+  if (v) {
+    mUserField |= ((0x1 << b) & 0xff);
+  } else {
+    mUserField &= ~((0x1 << b) & 0xff);
+  }
 }
 
+//____________________________________________________________
 template <typename value_T>
-GPUhdi() void TrackParametrization<value_T>::setUserField(uint16_t v)
+GPUhdi() bool TrackParametrization<value_T>::testBit(uint8_t b) const
 {
-  mUserField = v;
+  return mUserField & ((0x1 << b) & 0xff);
+}
+
+//____________________________________________________________
+template <typename value_T>
+GPUhdi() uint8_t TrackParametrization<value_T>::getBits() const
+{
+  return (mUserField & 0xff);
+}
+
+//____________________________________________________________
+template <typename value_T>
+GPUhdi() uint8_t TrackParametrization<value_T>::getUserField() const
+{
+  return ((mUserField >> 8) & 0xff);
+}
+
+//____________________________________________________________
+template <typename value_T>
+GPUhdi() void TrackParametrization<value_T>::setUserField(uint8_t v)
+{
+  mUserField |= uint16_t(v & 0xff) << 8;
 }
 
 //____________________________________________________________
