@@ -185,6 +185,7 @@ void TrackerTraitsGPU<NLayers>::computeLayerCells(const int iteration)
                                this->mTrkParams[iteration].MaxChi2ClusterAttachment,
                                this->mTrkParams[iteration].CellDeltaTanLambdaSigma,
                                this->mTrkParams[iteration].NSigmaCut,
+                               this->mTrkParams[iteration].AllowPerProjection,
                                this->mTrkParams[iteration].LayerxX0,
                                mTimeFrameGPU->getFrameworkAllocator(),
                                mTimeFrameGPU->getStreams());
@@ -206,6 +207,7 @@ void TrackerTraitsGPU<NLayers>::computeLayerCells(const int iteration)
                                  this->mTrkParams[iteration].MaxChi2ClusterAttachment,
                                  this->mTrkParams[iteration].CellDeltaTanLambdaSigma,
                                  this->mTrkParams[iteration].NSigmaCut,
+                                 this->mTrkParams[iteration].AllowPerProjection,
                                  this->mTrkParams[iteration].LayerxX0,
                                  mTimeFrameGPU->getStreams());
   }
@@ -319,6 +321,7 @@ void TrackerTraitsGPU<NLayers>::findRoads(const int iteration)
                           this->mTrkParams[iteration].ReseedIfShorter,
                           this->mTrkParams[iteration].RepeatRefitOut,
                           this->mTrkParams[iteration].ShiftRefToCluster,
+                          this->mTrkParams[iteration].AllowPerProjection,
                           mTimeFrameGPU->getDevicePropagator(),
                           this->mTrkParams[iteration].CorrType,
                           mTimeFrameGPU->getFrameworkAllocator());
@@ -340,6 +343,7 @@ void TrackerTraitsGPU<NLayers>::findRoads(const int iteration)
                             this->mTrkParams[iteration].ReseedIfShorter,
                             this->mTrkParams[iteration].RepeatRefitOut,
                             this->mTrkParams[iteration].ShiftRefToCluster,
+                            this->mTrkParams[iteration].AllowPerProjection,
                             mTimeFrameGPU->getDevicePropagator(),
                             this->mTrkParams[iteration].CorrType,
                             mTimeFrameGPU->getFrameworkAllocator());

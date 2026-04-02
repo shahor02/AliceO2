@@ -132,8 +132,10 @@ GPUdi() bool fitTrack(TrackITSExt& trk,
                       const o2::base::Propagator* propagator,
                       const o2::base::PropagatorF::MatCorrType matCorrType,
                       o2::track::TrackPar* linRef = nullptr,
-                      const bool shiftRefToCluster = false)
+                      const bool shiftRefToCluster = false,
+                      const bool allowPerProjection = false)
 {
+  trk.setPerProjection(allowPerProjection);
   for (int iLayer{start}; iLayer != end; iLayer += step) {
     if (trk.getClusterIndex(iLayer) == constants::UnusedIndex) {
       continue;
@@ -185,6 +187,9 @@ GPUdi() bool fitTrack(TrackITSExt& trk,
       linRef->setZ(trackingHit.positionTrackingFrame[1]);
     }
     nCl++;
+    if (nCl == 3) {
+      trk.setPerProjection(false);
+    }
   }
 
   return o2::gpu::CAMath::Abs(trk.getQ2Pt()) < maxQoverPt && trk.getChi2() < chi2ndfcut * (float)((nCl * 2) - 5);
@@ -205,7 +210,8 @@ GPUdi() bool refitTrack(const TrackSeed<NLayers>& trackSeed,
                         const o2::base::PropagatorF::MatCorrType matCorrType,
                         const int reseedIfShorter,
                         const bool shiftRefToCluster,
-                        const bool repeatRefitOut)
+                        const bool repeatRefitOut,
+                        const bool allowPerProjection = false)
 {
   temporaryTrack = seedTrackForRefit(trackSeed,
                                      tfInfos,
@@ -228,7 +234,8 @@ GPUdi() bool refitTrack(const TrackSeed<NLayers>& trackSeed,
                              propagator,
                              matCorrType,
                              &linRef,
-                             shiftRefToCluster);
+                             shiftRefToCluster,
+                             allowPerProjection);
   if (!fitSuccess) {
     return false;
   }
@@ -250,7 +257,8 @@ GPUdi() bool refitTrack(const TrackSeed<NLayers>& trackSeed,
                         propagator,
                         matCorrType,
                         &linRef,
-                        shiftRefToCluster);
+                        shiftRefToCluster,
+                        allowPerProjection);
   if (!fitSuccess || temporaryTrack.getPt() < minPt[NLayers - temporaryTrack.getNClusters()]) {
     return false;
   }
@@ -274,7 +282,8 @@ GPUdi() bool refitTrack(const TrackSeed<NLayers>& trackSeed,
                                           propagator,
                                           matCorrType,
                                           &linRef,
-                                          shiftRefToCluster);
+                                          shiftRefToCluster,
+                                          allowPerProjection);
     if (!fitSuccess) {
       return false;
     }

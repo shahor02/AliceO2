@@ -73,6 +73,7 @@ struct TrackingParameters {
   bool SaveTimeBenchmarks = false;
   bool DoUPCIteration = false;
   bool FataliseUponFailure = true;
+  bool AllowPerProjection = false;
 
   bool createArtefactLabels{false};
 

@@ -35,6 +35,7 @@ struct MatchTPCITSParams : public o2::conf::ConfigurableParamHelper<MatchTPCITSP
     Reject                             // reject match
   };
   bool runAfterBurner = true;                     ///< run afterburner for TPCtrack-ITScluster matching
+  bool allowPerProjection = true;                 ///< allow per projection fit for short tracks
   ValidateMatchByFIT validateMatchByFIT = Prefer; ///< when comparing ITS-TPC matches, prefer those which have time of Interaction Candidate
   TimeOutliersPolicy ITSTimeOutliersPolicy = Adjust;
   float crudeAbsDiffCut[o2::track::kNParams] = {2.f, 2.f, 0.2f, 0.2f, 4.f};

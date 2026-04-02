@@ -101,7 +101,7 @@ struct TrackerParamConfig : public o2::conf::ConfigurableParamHelper<TrackerPara
   bool dropTFUponFailure = false;
   bool fataliseUponFailure = true;       // granular management of the fatalisation in async mode
   bool allowSharingFirstCluster = false; // allow first cluster sharing among tracks
-
+  bool allowPerProjection = true;        // use per-projection operations for tracks with not-fully-constrained cov. matrix
   O2ParamDef(TrackerParamConfig, "ITSCATrackerParam");
 };
 

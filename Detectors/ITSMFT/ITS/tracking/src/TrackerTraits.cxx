@@ -301,6 +301,7 @@ void TrackerTraits<NLayers>::computeLayerCells(const int iteration)
 
           float chi2{0.f};
           bool good{false};
+          track.setPerProjection(mTrkParams[iteration].AllowPerProjection);
           for (int iC{2}; iC--;) {
             const TrackingFrameInfo& trackingHit = mTimeFrame->getTrackingFrameInfoOnLayer(iLayer + iC)[clusId[iC]];
 
@@ -328,6 +329,7 @@ void TrackerTraits<NLayers>::computeLayerCells(const int iteration)
             good = !iC;
             chi2 += predChi2;
           }
+          track.setPerProjection(false);
           if (good) {
             TimeEstBC ts = currentTracklet.getTimeStamp();
             ts += nextTracklet.getTimeStamp();
@@ -728,7 +730,8 @@ void TrackerTraits<NLayers>::findRoads(const int iteration)
                                                        mTrkParams[iteration].CorrType,
                                                        mTrkParams[iteration].ReseedIfShorter,
                                                        mTrkParams[iteration].ShiftRefToCluster,
-                                                       mTrkParams[iteration].RepeatRefitOut);
+                                                       mTrkParams[iteration].RepeatRefitOut,
+                                                       mTrkParams[iteration].AllowPerProjection);
 
         if (refitSuccess) {
           if constexpr (decltype(Tag)::value == PassMode::OnePass::value) {

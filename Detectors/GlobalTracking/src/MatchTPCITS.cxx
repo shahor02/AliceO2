@@ -1761,6 +1761,7 @@ bool MatchTPCITS::refitABTrack(int iITSAB, const TPCABSeed& seed, pmr::vector<o2
   const auto& itsClRefs = ABTrackletRefs[iITSAB];
   int nclRefit = 0, ncl = itsClRefs.getNClusters();
   float chi2 = 0.f;
+  tracOut.setPerProjection(mParams->allowPerProjection);
   // NOTE: the ITS cluster absolute indices are stored from inner to outer layers
   for (int icl = itsClRefs.getFirstEntry(); icl < itsClRefs.getEntriesBound(); icl++) {
     const auto& clus = mITSClustersArray[ABTrackletClusterIDs[icl]];
@@ -1776,7 +1777,9 @@ bool MatchTPCITS::refitABTrack(int iITSAB, const TPCABSeed& seed, pmr::vector<o2
     if (!tracOut.update(clus)) {
       break;
     }
-    nclRefit++;
+    if (++nclRefit == 3) {
+      tracOut.setPerProjection(false);
+    }
   }
   if (nclRefit != ncl) {
     LOGP(debug, "AfterBurner refit in ITS failed after ncl={}, match between TPC track #{} and ITS tracklet #{}", nclRefit, tTPC.sourceID, iITSAB);
@@ -1795,6 +1798,7 @@ bool MatchTPCITS::refitABTrack(int iITSAB, const TPCABSeed& seed, pmr::vector<o2
       matchedTracks.pop_back(); // destroy failed track
       return false;
     }
+    tracOut.setPerProjection(false); // the flag might have survived up to this stage for 2 point seeds
     float chi2Out = 0;
     auto posStart = tracOut.getXYZGlo();
     int retVal = mTPCRefitter->RefitTrackAsTrackParCov(tracOut, mTPCTracksArray[tTPC.sourceID].getClusterRef(), timeC * mTPCTBinMUSInv, &chi2Out, true, false); // outward refit

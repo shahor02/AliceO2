@@ -135,6 +135,7 @@ GPUg() void __launch_bounds__(256, 1) fitTrackSeedsKernel(
   const int reseedIfShorter,
   const bool repeatRefitOut,
   const bool shiftRefToCluster,
+  const bool allowPerProjection,
   const o2::base::Propagator* propagator,
   const o2::base::PropagatorF::MatCorrType matCorrType)
 {
@@ -160,7 +161,8 @@ GPUg() void __launch_bounds__(256, 1) fitTrackSeedsKernel(
                                                    matCorrType,
                                                    reseedIfShorter,
                                                    shiftRefToCluster,
-                                                   repeatRefitOut);
+                                                   repeatRefitOut,
+                                                   allowPerProjection);
     if (refitSuccess) {
       if constexpr (initRun) {
         seedLUT[iCurrentTrackSeedIndex] = 1;
@@ -242,7 +244,8 @@ GPUg() void __launch_bounds__(256, 1) computeLayerCellsKernel(
   const float bz,
   const float maxChi2ClusterAttachment,
   const float cellDeltaTanLambdaSigma,
-  const float nSigmaCut)
+  const float nSigmaCut,
+  const bool allowPerProjection)
 {
   for (int iCurrentTrackletIndex = blockIdx.x * blockDim.x + threadIdx.x; iCurrentTrackletIndex < nTrackletsCurrent; iCurrentTrackletIndex += blockDim.x * gridDim.x) {
     if constexpr (!initRun) {
@@ -278,6 +281,7 @@ GPUg() void __launch_bounds__(256, 1) computeLayerCellsKernel(
         const auto& cluster2_glo = unsortedClusters[layer + 1][clusId[1]];
         const auto& cluster3_tf = tfInfo[layer + 2][clusId[2]];
         auto track{o2::its::track::buildTrackSeed(cluster1_glo, cluster2_glo, cluster3_tf, bz)};
+        track.setPerProjection(allowPerProjection);
         float chi2{0.f};
         bool good{false};
         for (int iC{2}; iC--;) {
@@ -306,6 +310,7 @@ GPUg() void __launch_bounds__(256, 1) computeLayerCellsKernel(
         if (!good) {
           continue;
         }
+        track.setPerProjection(false);
         if constexpr (!initRun) {
           TimeEstBC ts = currentTracklet.getTimeStamp();
           ts += nextTracklet.getTimeStamp();
@@ -716,6 +721,7 @@ void countCellsHandler(
   const float maxChi2ClusterAttachment,
   const float cellDeltaTanLambdaSigma,
   const float nSigmaCut,
+  const bool allowPerProjection,
   const std::vector<float>& layerxX0Host,
   o2::its::ExternalAllocator* alloc,
   gpu::Streams& streams)
@@ -735,7 +741,8 @@ void countCellsHandler(
     bz,                       // const float
     maxChi2ClusterAttachment, // const float
     cellDeltaTanLambdaSigma,  // const float
-    nSigmaCut);               // const float
+    nSigmaCut,                // const float
+    allowPerProjection);      // const bool
   auto nosync_policy = THRUST_NAMESPACE::par_nosync(gpu::TypedAllocator<char>(alloc)).on(streams[layer].get());
   thrust::exclusive_scan(nosync_policy, cellsLUTsHost, cellsLUTsHost + nTracklets + 1, cellsLUTsHost);
 }
@@ -756,6 +763,7 @@ void computeCellsHandler(
   const float maxChi2ClusterAttachment,
   const float cellDeltaTanLambdaSigma,
   const float nSigmaCut,
+  const bool allowPerProjection,
   const std::vector<float>& layerxX0Host,
   gpu::Streams& streams)
 {
@@ -774,7 +782,8 @@ void computeCellsHandler(
     bz,                       // const float
     maxChi2ClusterAttachment, // const float
     cellDeltaTanLambdaSigma,  // const float
-    nSigmaCut);               // const float
+    nSigmaCut,                // const float
+    allowPerProjection);      // const bool
 }
 
 template <int NLayers>
@@ -1010,6 +1019,7 @@ void countTrackSeedHandler(TrackSeed<NLayers>* trackSeeds,
                            const int reseedIfShorter,
                            const bool repeatRefitOut,
                            const bool shiftRefToCluster,
+                           const bool allowPerProjection,
                            const o2::base::Propagator* propagator,
                            const o2::base::PropagatorF::MatCorrType matCorrType,
                            o2::its::ExternalAllocator* alloc)
@@ -1037,6 +1047,7 @@ void countTrackSeedHandler(TrackSeed<NLayers>* trackSeeds,
     reseedIfShorter,                          // int
     repeatRefitOut,                           // bool
     shiftRefToCluster,                        // bool
+    allowPerProjection,                       // bool
     propagator,                               // const o2::base::Propagator*
     matCorrType);                             // o2::base::PropagatorF::MatCorrType
   auto sync_policy = THRUST_NAMESPACE::par(gpu::TypedAllocator<char>(alloc));
@@ -1061,6 +1072,7 @@ void computeTrackSeedHandler(TrackSeed<NLayers>* trackSeeds,
                              const int reseedIfShorter,
                              const bool repeatRefitOut,
                              const bool shiftRefToCluster,
+                             const bool allowPerProjection,
                              const o2::base::Propagator* propagator,
                              const o2::base::PropagatorF::MatCorrType matCorrType,
                              o2::its::ExternalAllocator* alloc)
@@ -1085,6 +1097,7 @@ void computeTrackSeedHandler(TrackSeed<NLayers>* trackSeeds,
     reseedIfShorter,                          // int
     repeatRefitOut,                           // bool
     shiftRefToCluster,                        // bool
+    allowPerProjection,                       // bool
     propagator,                               // const o2::base::Propagator*
     matCorrType);                             // o2::base::PropagatorF::MatCorrType
   auto sync_policy = THRUST_NAMESPACE::par(gpu::TypedAllocator<char>(alloc));
@@ -1164,6 +1177,7 @@ template void countCellsHandler<7>(const Cluster** sortedClusters,
                                    const float maxChi2ClusterAttachment,
                                    const float cellDeltaTanLambdaSigma,
                                    const float nSigmaCut,
+                                   const bool allowPerProjection,
                                    const std::vector<float>& layerxX0Host,
                                    o2::its::ExternalAllocator* alloc,
                                    gpu::Streams& streams);
@@ -1182,6 +1196,7 @@ template void computeCellsHandler<7>(const Cluster** sortedClusters,
                                      const float maxChi2ClusterAttachment,
                                      const float cellDeltaTanLambdaSigma,
                                      const float nSigmaCut,
+                                     const bool allowPerProjection,
                                      const std::vector<float>& layerxX0Host,
                                      gpu::Streams& streams);
 
@@ -1247,6 +1262,7 @@ template void countTrackSeedHandler(TrackSeed<7>* trackSeeds,
                                     const int reseedIfShorter,
                                     const bool repeatRefitOut,
                                     const bool shiftRefToCluster,
+                                    const bool allowPerProjection,
                                     const o2::base::Propagator* propagator,
                                     const o2::base::PropagatorF::MatCorrType matCorrType,
                                     o2::its::ExternalAllocator* alloc);
@@ -1268,6 +1284,7 @@ template void computeTrackSeedHandler(TrackSeed<7>* trackSeeds,
                                       const int reseedIfShorter,
                                       const bool repeatRefitOut,
                                       const bool shiftRefToCluster,
+                                      const bool allowPerProjection,
                                       const o2::base::Propagator* propagator,
                                       const o2::base::PropagatorF::MatCorrType matCorrType,
                                       o2::its::ExternalAllocator* alloc);
