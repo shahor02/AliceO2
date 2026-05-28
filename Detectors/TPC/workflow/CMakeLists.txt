@@ -236,7 +236,7 @@ o2_add_executable(time-series-workflow
 o2_add_executable(scaler-workflow
                   COMPONENT_NAME tpc
                   SOURCES src/tpc-scaler.cxx
-                  PUBLIC_LINK_LIBRARIES O2::TPCWorkflow)
+                  PUBLIC_LINK_LIBRARIES O2::TPCWorkflow O2::GlobalTrackingWorkflowHelpers)
 
 o2_add_test(workflow
             COMPONENT_NAME tpc
