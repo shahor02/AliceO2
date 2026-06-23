@@ -23,12 +23,12 @@ namespace o2
 {
 namespace dataformats
 {
-  
+
 struct MeanVertexBiasParam : public o2::conf::ConfigurableParamHelper<MeanVertexBiasParam> {
-  float xyz[3] = {};    // position bias
-  float slopeX = 0.f;   // x slope bias
-  float slopeY = 0.f;   // y slope bias
-  
+  float xyz[3] = {};  // position bias
+  float slopeX = 0.f; // x slope bias
+  float slopeY = 0.f; // y slope bias
+
   O2ParamDef(MeanVertexBiasParam, "mvbias");
 };
 
