@@ -34,7 +34,6 @@ constexpr float UnsetValue = -999.f;                    // global unset value
 constexpr float Radl = 9.36f;                           // Radiation length of Si [cm]
 constexpr float Rho = 2.33f;                            // Density of Si [g/cm^3]
 constexpr int MaxIter = 4;                              // Max. supported iterations
-constexpr int MaxSelectedTrackletsPerCluster = 100;     // vertexer: max lines per cluster
 constexpr int NumberOfConcurrentSeeds = 16;             // default split per worker for the final track fit/extraploation step
 constexpr int MinNumberOfConcurrentSeeds = (1 << 8);    // minimum chunk size for a worker for the final track fit/extraploation step
 constexpr int MaxNumberOfConcurrentSeeds = (1 << 12);   // maximum chunk size for a worker for the final track fit/extraploation step

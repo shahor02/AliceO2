@@ -305,7 +305,7 @@ void VertexerTraits<NLayers>::computeTrackletMatching(const int iteration)
           if (mTimeFrame->getFoundTracklets(pivotRofId, 0).empty() || skipROF(iteration, pivotRofId)) {
             continue;
           }
-          mTimeFrame->getLines(pivotRofId).reserve(std::min(mTimeFrame->getFoundTracklets(pivotRofId, 0).size(), mTimeFrame->getNTrackletsCluster(pivotRofId, 0).size() * constants::MaxSelectedTrackletsPerCluster));
+          mTimeFrame->getLines(pivotRofId).reserve(std::min(mTimeFrame->getFoundTracklets(pivotRofId, 0).size(), mTimeFrame->getNTrackletsCluster(pivotRofId, 0).size() * mVrtParams[iteration].maxTrackletsPerCluster));
           bounded_vector<uint8_t> usedTracklets(mTimeFrame->getFoundTracklets(pivotRofId, 0).size(), 0, mMemoryPool.get());
           trackletSelectionKernelHost(
             mTimeFrame->getClusters()[0].data(),
@@ -323,7 +323,7 @@ void VertexerTraits<NLayers>::computeTrackletMatching(const int iteration)
             static_cast<int>(mTimeFrame->getClustersOnLayer(pivotRofId, 1).size()),
             mVrtParams[iteration].tanLambdaCut,
             mVrtParams[iteration].phiCut,
-            constants::MaxSelectedTrackletsPerCluster);
+            mVrtParams[iteration].maxTrackletsPerCluster);
           totalLines.local() += mTimeFrame->getLines(pivotRofId).size();
         }
       });
