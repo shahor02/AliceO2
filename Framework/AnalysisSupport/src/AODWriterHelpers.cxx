@@ -501,7 +501,7 @@ AlgorithmSpec AODWriterHelpers::getMetadataCollector(ConfigContext const& /*ctx*
           std::string k = key->GetName();
           std::string v = value != nullptr ? value->GetName() : "";
           auto it = std::ranges::find_if(*merged,
-                                 [&k](auto const& e) { return e.first == k; });
+                                         [&k](auto const& e) { return e.first == k; });
           if (it != merged->end()) {
             it->second = std::move(v);
           } else {
