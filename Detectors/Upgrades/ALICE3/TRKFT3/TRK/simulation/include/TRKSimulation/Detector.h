@@ -81,13 +81,13 @@ class Detector : public o2::base::DetImpl<Detector>
 
   // Transient data about track passing the sensor
   struct TrackData {
-    bool mHitStarted;               // hit creation started
-    unsigned char mTrkStatusStart;  // track status flag
-    TLorentzVector mPositionStart;  // position at entrance
-    TLorentzVector mMomentumStart;  // momentum
-    double mEnergyLoss;             // energy loss
-  } mTrackData;                     //! transient data
-  GeometryTGeo* mGeometryTGeo;      //!
+    bool mHitStarted;              // hit creation started
+    unsigned char mTrkStatusStart; // track status flag
+    TLorentzVector mPositionStart; // position at entrance
+    TLorentzVector mMomentumStart; // momentum
+    double mEnergyLoss;            // energy loss
+  } mTrackData;                    //! transient data
+  GeometryTGeo* mGeometryTGeo;     //!
   std::vector<o2::trkft3::Hit>* mHits;
   std::vector<std::unique_ptr<TRKCylindricalLayer>> mLayers;
   TRKServices mServices; // Houses the services of the TRK, but not the Iris tracker

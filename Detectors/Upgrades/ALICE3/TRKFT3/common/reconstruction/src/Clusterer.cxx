@@ -25,7 +25,7 @@ namespace o2::trk
 //__________________________________________________
 template <int DetID>
 o2::math_utils::Point3D<float> Clusterer<DetID>::getClusterLocalCoordinates(const typename Clusterer<DetID>::ClusterType& cluster, const uint8_t* patt,
-                                                                     float yPlaneMLOT) noexcept
+                                                                            float yPlaneMLOT) noexcept
 {
   const uint8_t rowSpan = *patt++;
   const uint8_t colSpan = *patt++;
@@ -132,12 +132,12 @@ void Clusterer<DetID>::process(gsl::span<const Digit> digits,
 //__________________________________________________
 template <int DetID>
 void Clusterer<DetID>::ClustererThread::processChip(gsl::span<const Digit> digits,
-                                             int chipFirst, int chipN,
-                                             std::vector<ClusterType>* clustersOut,
-                                             std::vector<unsigned char>* patternsOut,
-                                             const ConstDigitTruth* labelsDigPtr,
-                                             ClusterTruth* labelsClusPtr,
-                                             GeometryTGeo* geom)
+                                                    int chipFirst, int chipN,
+                                                    std::vector<ClusterType>* clustersOut,
+                                                    std::vector<unsigned char>* patternsOut,
+                                                    const ConstDigitTruth* labelsDigPtr,
+                                                    ClusterTruth* labelsClusPtr,
+                                                    GeometryTGeo* geom)
 {
   // chipFirst and chipN are relative to mSortIdx (i.e. mSortIdx[chipFirst..chipFirst+chipN-1]
   // are the global digit indices for this chip, already sorted by col then row).
@@ -266,9 +266,9 @@ void Clusterer<DetID>::ClustererThread::updateChip(gsl::span<const Digit> digits
 //__________________________________________________
 template <int DetID>
 void Clusterer<DetID>::ClustererThread::finishChip(gsl::span<const Digit> digits,
-                                            const ConstDigitTruth* labelsDigPtr,
-                                            ClusterTruth* labelsClusPtr,
-                                            GeometryTGeo* geom)
+                                                   const ConstDigitTruth* labelsDigPtr,
+                                                   ClusterTruth* labelsClusPtr,
+                                                   GeometryTGeo* geom)
 {
   const uint16_t chipID = digits[pixels[0].second].getChipIndex();
 
@@ -359,9 +359,9 @@ void Clusterer<DetID>::ClustererThread::finishChip(gsl::span<const Digit> digits
 //__________________________________________________
 template <int DetID>
 void Clusterer<DetID>::ClustererThread::finishChipSingleHitFast(gsl::span<const Digit> digits, uint32_t hit,
-                                                         const ConstDigitTruth* labelsDigPtr,
-                                                         ClusterTruth* labelsClusPtr,
-                                                         GeometryTGeo* geom)
+                                                                const ConstDigitTruth* labelsDigPtr,
+                                                                ClusterTruth* labelsClusPtr,
+                                                                GeometryTGeo* geom)
 {
   const auto& d = digits[hit];
   const uint16_t chipID = d.getChipIndex();
@@ -397,10 +397,10 @@ void Clusterer<DetID>::ClustererThread::finishChipSingleHitFast(gsl::span<const 
 //__________________________________________________
 template <int DetID>
 void Clusterer<DetID>::ClustererThread::streamCluster(const BBox& bbox,
-                                               const std::vector<std::pair<uint16_t, uint16_t>>& pixbuf,
-                                               uint32_t totalCharge,
-                                               bool doLabels, int nlab,
-                                               uint16_t chipID, int subDetID, int layer)
+                                                      const std::vector<std::pair<uint16_t, uint16_t>>& pixbuf,
+                                                      uint32_t totalCharge,
+                                                      bool doLabels, int nlab,
+                                                      uint16_t chipID, int subDetID, int layer)
 {
   if (doLabels) {
     const auto cnt = static_cast<uint32_t>(clusters.size());

@@ -501,7 +501,7 @@ void Digitizer<DetID>::processHit(const o2::trkft3::Hit& hit, uint32_t& maxFr, i
 //________________________________________________________________________________
 template <int DetID>
 void Digitizer<DetID>::registerDigits(o2::trkft3::ChipDigitsContainer& chip, uint32_t roFrame, float tInROF, int nROF,
-                               uint16_t row, uint16_t col, int nEle, o2::MCCompLabel& lbl, int layer)
+                                      uint16_t row, uint16_t col, int nEle, o2::MCCompLabel& lbl, int layer)
 {
   // Register digits for given pixel, accounting for the possible signal contribution to
   // multiple ROFrame. The signal starts at time tInROF wrt the start of provided roFrame

@@ -157,7 +157,7 @@ class Digitizer
 
   static constexpr float sec2ns = 1e9;
 
-  o2::trkft3::DigiParams<DetID> mParams;      ///< digitization parameters
+  o2::trkft3::DigiParams<DetID> mParams;   ///< digitization parameters
   o2::InteractionTimeRecord mEventTime;    ///< global event time and interaction record
   o2::InteractionRecord mIRFirstSampledTF; ///< IR of the 1st sampled IR, noise-only ROFs will be inserted till this IR only
   double mCollisionTimeWrtROF{};
@@ -191,7 +191,7 @@ class Digitizer
   const GeometryTGeo* mGeometry = nullptr; ///< TRK or FT3 geometry
 
   std::vector<o2::trkft3::ChipDigitsContainer> mChips; ///< Array of chips digits containers
-  std::deque<std::unique_ptr<ExtraDig>> mExtraBuff; ///< buffer (per roFrame) for extra digits
+  std::deque<std::unique_ptr<ExtraDig>> mExtraBuff;    ///< buffer (per roFrame) for extra digits
 
   std::vector<o2::trkft3::Digit>* mDigits = nullptr;                       //! output digits
   std::vector<o2::trkft3::ROFRecord>* mROFRecords = nullptr;               //! output ROF records

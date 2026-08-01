@@ -114,8 +114,8 @@ class GeometryTGeo : public o2::detectors::DetMatrixCache
   static std::string sVolumeName;      ///< Mother volume name
   static std::string sLayerName;       ///< Layer name
   static std::string sChipName;        ///< Chip name
-  static std::string sSensorName; ///< Sensor name
-  static std::string sPassiveName; ///< Passive material name
+  static std::string sSensorName;      ///< Sensor name
+  static std::string sPassiveName;     ///< Passive material name
   std::vector<unsigned short> mFirstChipIndexLayer;
   std::vector<unsigned short> mFirstStaveIndexLayer;
   std::vector<unsigned short> mFirstChipIndexStave;

@@ -69,7 +69,7 @@ struct TRKBaseParam : public o2::conf::ConfigurableParamHelper<TRKBaseParam> {
   eVDLayout layoutVD = kIRIS4;         // VD detector layout design
   eMLOTLayout layoutMLOT = kSegmented; // ML and OT detector layout design
   eFT3Layout layoutFT3 = kSegmentedStave;
-  eSrvLayout layoutSRV = kPeacockv1;   // Layout of services
+  eSrvLayout layoutSRV = kPeacockv1; // Layout of services
 
   eVDLayout getLayoutVD() const { return layoutVD; }
   eMLOTLayout getLayoutMLOT() const { return layoutMLOT; }
