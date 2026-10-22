@@ -31,6 +31,7 @@ struct CheckResidConfig : o2::conf::ConfigurableParamHelper<CheckResidConfig> {
   bool doResid = true;
   bool useITSGloContributors = false;
 
+  int skipLr = -1; // skip this layer in the refit (by inflating its cluster errors by factor 1000)
   bool refitPV = true;
   float refitPVMV = false;
   float refitPVIniScale = 100.f;

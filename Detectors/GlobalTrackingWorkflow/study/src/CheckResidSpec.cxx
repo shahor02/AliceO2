@@ -405,6 +405,7 @@ bool CheckResidSpec::processITSTrack(const o2::its::TrackITS& iTrack, const o2::
   float pvAlpha = 0;
   float bz = prop->getNominalBz();
   std::array<const o2::BaseCluster<float>*, 8> clArr{};
+  o2::BaseCluster<float> dummyClSkip;
   const auto& params = CheckResidConfig::Instance();
   std::array<o2::track::TrackParCov, 8> extrapOut, extrapInw; // 2-way Kalman extrapolations, vertex + 7 layers
 
@@ -464,7 +465,15 @@ bool CheckResidSpec::processITSTrack(const o2::its::TrackITS& iTrack, const o2::
     if (clArr[1 + llr]) {
       LOGP(error, "Cluster at lr {} was already assigned, old sens {}, new sens {}", llr, clArr[1 + llr]->getSensorID(), curClu.getSensorID());
     }
-    clArr[1 + geom->getLayer(curClu.getSensorID())] = &curClu;
+    if (params.skipLr == llr) {
+      dummyClSkip = curClu; // copy and iflate errors
+      dummyClSkip.setSigmaY2(curClu.getSigmaY2() * 1000);
+      dummyClSkip.setSigmaZ2(curClu.getSigmaZ2() * 1000);
+      dummyClSkip.setSigmaYZ(curClu.getSigmaYZ() * 1000);
+      clArr[1 + llr] = &dummyClSkip;
+    } else {
+      clArr[1 + llr] = &curClu;
+    }
   }
   o2::track::TrackPar refLinInw0, refLinOut0, *refLinOut = nullptr, *refLinInw = nullptr;
   o2::track::TrackPar refLinIBOut0, refLinOBInw0, *refLinOBInw = nullptr, *refLinIBOut = nullptr;
